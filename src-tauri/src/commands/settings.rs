@@ -12,6 +12,14 @@ pub struct AppSettings {
     /// Tab overlay panel position — percentage of screen width/height (0–100)
     pub tab_overlay_left:     f64,
     pub tab_overlay_top:      f64,
+    /// Timers overlay position — percentage of screen width/height (0–100)
+    pub timers_overlay_left:  f64,
+    pub timers_overlay_top:   f64,
+    /// LoL "UI Scale" setting (50–100, matches in-game slider).
+    /// Used only for the layout preview; does not affect LoL itself.
+    pub hud_scale:            u32,
+    /// LoL minimap scale (50–150, matches in-game minimap slider).
+    pub minimap_scale:        u32,
 }
 
 impl Default for AppSettings {
@@ -21,6 +29,11 @@ impl Default for AppSettings {
             poll_interval_ms:    1000,
             tab_overlay_left:    70.0,
             tab_overlay_top:     8.0,
+            // ~top-right corner (208px panel on 1920px screen ≈ 88% left, ~1.5% top)
+            timers_overlay_left: 88.0,
+            timers_overlay_top:  1.5,
+            hud_scale:           100,
+            minimap_scale:       100,
         }
     }
 }

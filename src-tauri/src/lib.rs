@@ -11,6 +11,7 @@ use tracing_subscriber::EnvFilter;
 
 use commands::{
     inference::predict_win,
+    lol_config::read_lol_config,
     settings::{get_settings, save_settings, set_overlay_clickthrough},
     spells::{get_spell_cooldowns, mark_spell_used, new_registry},
 };
@@ -82,6 +83,7 @@ pub fn run() {
             set_overlay_clickthrough,
             mark_spell_used,
             get_spell_cooldowns,
+            read_lol_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

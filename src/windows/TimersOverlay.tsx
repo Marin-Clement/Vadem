@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useGameState } from "../hooks/useGameState";
+import { useSettings } from "../hooks/useSettings";
 import { OverlayPanel } from "../components/OverlayPanel";
 
 interface ObjectiveTimer {
@@ -17,6 +18,7 @@ const RESPAWN: Record<string, number> = {
 
 export default function TimersOverlay() {
   const game = useGameState();
+  const { settings } = useSettings();
   const [timers, setTimers] = useState<ObjectiveTimer[]>([]);
 
   // Listen for objective kill events
@@ -50,7 +52,10 @@ export default function TimersOverlay() {
   if (!game.isGameActive) return null;
 
   return (
-    <div className="fixed top-4 right-4">
+    <div
+      className="fixed"
+      style={{ left: `${settings.timersOverlayLeft}%`, top: `${settings.timersOverlayTop}%` }}
+    >
       <OverlayPanel className="w-52">
         <div className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-2">
           Objective Timers

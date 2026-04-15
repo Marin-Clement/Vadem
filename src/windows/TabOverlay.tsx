@@ -1,6 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { useState, useEffect } from "react";
 import { useGameState } from "../hooks/useGameState";
 import { useSettings } from "../hooks/useSettings";
 import { OverlayPanel } from "../components/OverlayPanel";
@@ -10,71 +8,14 @@ import { computeWinProb } from "../utils/winProb";
 
 export default function TabOverlay() {
   const game = useGameState();
-  const { settings, saveSettings } = useSettings();
+  const { settings } = useSettings();
   const [winProb, setWinProb] = useState<number | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-
-  // Panel position in % (controlled locally while dragging, persisted on drop)
-  const [pos, setPos] = useState({ left: settings.tabOverlayLeft, top: settings.tabOverlayTop });
-  const dragState = useRef<{ startX: number; startY: number; startLeft: number; startTop: number } | null>(null);
-
-  // Sync position when settings load
-  useEffect(() => {
-    setPos({ left: settings.tabOverlayLeft, top: settings.tabOverlayTop });
-  }, [settings.tabOverlayLeft, settings.tabOverlayTop]);
-
-  // Listen for edit-mode events from the dashboard
-  useEffect(() => {
-    const unlisten = listen<boolean>("overlay_edit_mode", (e) => {
-      setIsEditing(e.payload);
-    });
-    return () => { unlisten.then((f) => f()); };
-  }, []);
 
   // Win probability — recompute when game state changes
   useEffect(() => {
     if (!settings.showWinPrediction) { setWinProb(null); return; }
     computeWinProb(game).then(setWinProb);
   }, [game, settings.showWinPrediction]);
-
-  // ── Drag logic ─────────────────────────────────────────────────────────────
-  const onDragStart = useCallback((e: React.MouseEvent) => {
-    if (!isEditing) return;
-    e.preventDefault();
-    dragState.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startLeft: pos.left,
-      startTop:  pos.top,
-    };
-  }, [isEditing, pos]);
-
-  useEffect(() => {
-    if (!isEditing) return;
-    const onMove = (e: MouseEvent) => {
-      if (!dragState.current) return;
-      const dx = ((e.clientX - dragState.current.startX) / window.innerWidth)  * 100;
-      const dy = ((e.clientY - dragState.current.startY) / window.innerHeight) * 100;
-      setPos({
-        left: Math.max(0, Math.min(90, dragState.current.startLeft + dx)),
-        top:  Math.max(0, Math.min(85, dragState.current.startTop  + dy)),
-      });
-    };
-    const onUp = () => {
-      if (!dragState.current) return;
-      dragState.current = null;
-      // Persist position and re-enable click-through
-      saveSettings({ tabOverlayLeft: pos.left, tabOverlayTop: pos.top });
-      invoke("set_overlay_clickthrough", { windowLabel: "tab-overlay", enabled: true });
-      setIsEditing(false);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [isEditing, pos, saveSettings]);
 
   // ── Derived display values ─────────────────────────────────────────────────
   const mins = Math.floor(game.gameTime / 60);
@@ -94,7 +35,7 @@ export default function TabOverlay() {
   const dragonLead = Math.round(game.dragonDiff);
   const towerLead  = Math.round(game.towerDiff);
 
-  if (!game.isGameActive && !isEditing) return null;
+  if (!game.isGameActive) return null;
 
   return (
     /* Full-screen transparent container; pointer-events only on the panel itself */
@@ -102,24 +43,12 @@ export default function TabOverlay() {
       <div
         className="absolute"
         style={{
-          left:          `${pos.left}%`,
-          top:           `${pos.top}%`,
-          pointerEvents: isEditing ? "auto" : "none",
+          left:          `${settings.tabOverlayLeft}%`,
+          top:           `${settings.tabOverlayTop}%`,
+          pointerEvents: "none",
         }}
       >
         <OverlayPanel className="w-72">
-          {/* Drag handle — only visible in edit mode */}
-          {isEditing && (
-            <div
-              onMouseDown={onDragStart}
-              className="flex items-center justify-center gap-1 -mt-1 mb-2 cursor-grab active:cursor-grabbing
-                         text-text-muted hover:text-accent transition-colors select-none"
-              title="Drag to reposition"
-            >
-              <span className="text-xs">⠿ drag to move</span>
-            </div>
-          )}
-
           {/* Header: time + score */}
           <div className="flex items-center justify-between mb-2">
             <span className="font-mono text-xs text-text-secondary">{timeStr}</span>

@@ -1,38 +1,18 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { emit } from "@tauri-apps/api/event";
 import { useGameState } from "../hooks/useGameState";
 import { useSettings } from "../hooks/useSettings";
 import { Badge } from "../components/Badge";
+import { LayoutEditor } from "../components/LayoutEditor";
 
 export default function Dashboard() {
   const game = useGameState();
   const { settings, saveSettings } = useSettings();
-  const [editingLayout, setEditingLayout] = useState(false);
+  const [showLayoutEditor, setShowLayoutEditor] = useState(false);
 
   const gameTimeStr = () => {
     const mins = Math.floor(game.gameTime / 60);
     const secs = Math.floor(game.gameTime % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const toggleEditLayout = async () => {
-    const next = !editingLayout;
-    setEditingLayout(next);
-    // Disable click-through on tab-overlay so the panel becomes draggable
-    await invoke("set_overlay_clickthrough", {
-      windowLabel: "tab-overlay",
-      enabled: !next,
-    });
-    // Tell the tab overlay window to show its drag handle
-    await emit("overlay_edit_mode", next);
-    // Show/hide the overlay so the user can see it while repositioning
-    const w = await import("@tauri-apps/api/webviewWindow");
-    const overlay = await w.WebviewWindow.getByLabel("tab-overlay");
-    if (overlay) {
-      if (next) await overlay.show();
-      else await overlay.hide();
-    }
   };
 
   return (
@@ -100,25 +80,31 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Edit overlay layout */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs font-medium text-text-primary">Edit overlay layout</div>
-            <div className="text-2xs text-text-muted">
-              {editingLayout ? "Drag the panel, then click Done" : "Reposition the TAB overlay panel"}
+        {/* Edit overlay layout — collapsible */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-medium text-text-primary">Edit overlay layout</div>
+              <div className="text-2xs text-text-muted">
+                {showLayoutEditor ? "Drag elements on the preview below" : "Reposition overlay panels"}
+              </div>
             </div>
+            <button
+              onClick={() => setShowLayoutEditor((v) => !v)}
+              className={[
+                "px-3 py-1 rounded text-xs font-medium border transition-colors duration-150",
+                showLayoutEditor
+                  ? "bg-accent text-white border-accent"
+                  : "bg-surface-raised text-text-secondary border-surface-border hover:border-accent/50",
+              ].join(" ")}
+            >
+              {showLayoutEditor ? "Done" : "Edit"}
+            </button>
           </div>
-          <button
-            onClick={toggleEditLayout}
-            className={[
-              "px-3 py-1 rounded text-xs font-medium border transition-colors duration-150",
-              editingLayout
-                ? "bg-accent text-white border-accent"
-                : "bg-surface-raised text-text-secondary border-surface-border hover:border-accent/50",
-            ].join(" ")}
-          >
-            {editingLayout ? "Done" : "Move"}
-          </button>
+
+          {showLayoutEditor && (
+            <LayoutEditor settings={settings} onSave={saveSettings} />
+          )}
         </div>
       </div>
     </div>
