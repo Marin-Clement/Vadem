@@ -1,0 +1,21 @@
+# Node
+node_modules/
+dist/
+
+# Rust / Cargo
+src-tauri/target/
+src-tauri/gen/
+
+# Tauri
+src-tauri/WixTools/
+src-tauri/*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/settings.json
+*.suo
+*.user
