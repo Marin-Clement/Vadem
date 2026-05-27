@@ -4,6 +4,7 @@ import { Icon } from "./Icon";
 import { useGameState } from "../hooks/useGameState";
 import { useAuthStore } from "../store/authStore";
 import { useDDragon } from "../utils/ddragon";
+import logoUrl from "../assets/logo.svg";
 
 type Screen = "dashboard" | "profile" | "matchDetail" | "draft" | "builds" | "macro" | "overlay" | "settings";
 
@@ -109,7 +110,7 @@ export function AppShell({ children, screen, onNavigate }: AppShellProps) {
       <div className="titlebar">
         <div className="titlebar-left">
           <div className="titlebar-brand">
-            <div className="titlebar-brand-mark" />
+            <img src={logoUrl} alt="Vadem" style={{ height: 18, width: "auto", display: "block" }} />
             VADEM
           </div>
           <div className="titlebar-status">
