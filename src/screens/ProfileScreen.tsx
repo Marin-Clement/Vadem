@@ -2,16 +2,26 @@ import { useState, useEffect } from "react";
 import { Icon } from "../components/Icon";
 import { Champ } from "../components/Champ";
 import { DDragonItem } from "../components/Champ";
-import { StatTile, Sparkline, KDARatio } from "../components/Primitives";
+import { StatTile, KDARatio } from "../components/Primitives";
 import { listMatches, getMatch, formatDuration, formatRelativeTime, type MatchListItem, type MatchDetail } from "../api/matches";
-import { getProfile, syncMatches, type PlayerProfile } from "../api/player";
+import { getProfile, getSummary, getChampionPool, getRoleDist, syncMatches, type PlayerProfile, type PlayerSummary, type ChampionPoolEntry, type RoleDist } from "../api/player";
 import { useAuthStore } from "../store/authStore";
 import { useDDragon } from "../utils/ddragon";
+
+type Screen = "dashboard" | "profile" | "matchDetail" | "draft" | "builds" | "macro" | "overlay" | "settings";
+
+const TIER_COLOR: Record<string, string> = {
+  IRON: "#6b7280", BRONZE: "#92400e", SILVER: "#9ca3af",
+  GOLD: "#d97706", PLATINUM: "#0d9488", EMERALD: "#059669",
+  DIAMOND: "#6366f1", MASTER: "#9333ea", GRANDMASTER: "#dc2626",
+  CHALLENGER: "#f59e0b",
+};
 
 interface Props {
   selectedMatchId: string | null;
   onSelectMatch: (id: string) => void;
   onOpenMatchDetail: (id: string) => void;
+  onNavigate?: (s: Screen, extra?: { championId?: string }) => void;
 }
 
 function MatchDetailPanel({ matchId, onOpenFull }: { matchId: string; onOpenFull: () => void }) {
@@ -50,18 +60,31 @@ function MatchDetailPanel({ matchId, onOpenFull }: { matchId: string; onOpenFull
           </div>
         </div>
 
-        {/* Middle: teams */}
+        {/* Middle: teams with summoner names */}
         <div>
           <div className="t-eyebrow" style={{ marginBottom: 8 }}>ALLY TEAM</div>
-          <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+          <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+            <Champ id={detail.champion_id.toLowerCase()} size="sm" withTooltip playerName="You" />
             {detail.ally_champions.map((id, i) => (
-              <Champ key={i} id={id.toLowerCase()} size="sm" withTooltip />
+              <Champ
+                key={i}
+                id={id.toLowerCase()}
+                size="sm"
+                withTooltip
+                playerName={detail.ally_participants?.[i]?.game_name}
+              />
             ))}
           </div>
           <div className="t-eyebrow" style={{ marginBottom: 8 }}>ENEMY TEAM</div>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ display: "flex", gap: 4 }}>
             {detail.enemy_champions.map((id, i) => (
-              <Champ key={i} id={id.toLowerCase()} size="sm" withTooltip />
+              <Champ
+                key={i}
+                id={id.toLowerCase()}
+                size="sm"
+                withTooltip
+                playerName={detail.enemy_participants?.[i]?.game_name}
+              />
             ))}
           </div>
         </div>
@@ -80,9 +103,14 @@ function MatchDetailPanel({ matchId, onOpenFull }: { matchId: string; onOpenFull
               </div>
               <div className="t-eyebrow" style={{ fontSize: 9 }}>GOLD</div>
             </div>
+            <div>
+              <div className="t-display" style={{ fontSize: 28, fontWeight: 600, color: "var(--accent)" }}>
+                {(detail.damage ?? 0) > 1000 ? `${((detail.damage ?? 0) / 1000).toFixed(1)}k` : detail.damage ?? 0}
+              </div>
+              <div className="t-eyebrow" style={{ fontSize: 9 }}>DMG</div>
+            </div>
           </div>
-          <Sparkline data={[50, 52, 55, 58, 60, detail.result ? 65 : 40]} color={detail.result ? "var(--green)" : "var(--red)"} />
-          <button className="btn btn-sm" style={{ marginTop: 12, width: "100%" }} onClick={(e) => { e.stopPropagation(); onOpenFull(); }}>
+          <button className="btn btn-sm" style={{ marginTop: 8, width: "100%" }} onClick={(e) => { e.stopPropagation(); onOpenFull(); }}>
             <Icon name="search" size={11} /> OPEN FULL TIMELINE
           </button>
         </div>
@@ -91,7 +119,7 @@ function MatchDetailPanel({ matchId, onOpenFull }: { matchId: string; onOpenFull
   );
 }
 
-export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetail }: Props) {
+export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetail, onNavigate }: Props) {
   const storeProfile = useAuthStore(s => s.profile);
   const setStoreProfile = useAuthStore(s => s.setProfile);
   const ddr = useDDragon();
@@ -99,6 +127,9 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
   const [openId, setOpenId] = useState<string | null>(selectedMatchId);
   const [matches, setMatches] = useState<MatchListItem[]>([]);
   const [profile, setProfile] = useState<PlayerProfile | null>(storeProfile);
+  const [summary, setSummary] = useState<PlayerSummary | null>(null);
+  const [champPool, setChampPool] = useState<ChampionPoolEntry[]>([]);
+  const [roleDist, setRoleDist] = useState<RoleDist[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
@@ -113,14 +144,19 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
         if (cancelled) return;
         setProfile(p);
         setStoreProfile(p);
+
+        // Load aggregations in parallel (non-blocking)
+        getSummary().then(s => { if (!cancelled) setSummary(s); }).catch(() => {});
+        getChampionPool().then(cp => { if (!cancelled) setChampPool(cp); }).catch(() => {});
+        getRoleDist().then(rd => { if (!cancelled) setRoleDist(rd); }).catch(() => {});
+
         if (m.length === 0) {
-          // Auto-sync if no matches found yet
           setSyncing(true);
           try {
             await syncMatches();
             const fresh = await listMatches({ limit: 20 });
             if (!cancelled) setMatches(fresh);
-          } catch { /* ignore sync errors */ }
+          } catch { /* ignore */ }
           finally { if (!cancelled) setSyncing(false); }
         } else {
           setMatches(m);
@@ -137,8 +173,16 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
     setSyncing(true);
     try {
       await syncMatches();
-      const updated = await listMatches({ limit: 20 });
+      const [updated, s, cp, rd] = await Promise.all([
+        listMatches({ limit: 20 }),
+        getSummary().catch(() => null),
+        getChampionPool().catch(() => []),
+        getRoleDist().catch(() => []),
+      ]);
       setMatches(updated);
+      if (s) setSummary(s);
+      setChampPool(cp);
+      setRoleDist(rd);
     } finally {
       setSyncing(false);
     }
@@ -155,21 +199,14 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
     ? `https://ddragon.leagueoflegends.com/cdn/${ddr.version}/img/profileicon/${profile.profile_icon_id}.png`
     : null;
 
-  const avgKDA = (() => {
-    const valid = matches.filter(m => m.kills != null && m.deaths != null && m.assists != null);
-    if (!valid.length) return "—";
-    const sum = valid.reduce((s, m) => {
-      const d = m.deaths === 0 ? 1 : (m.deaths ?? 1);
-      return s + ((m.kills ?? 0) + (m.assists ?? 0)) / d;
-    }, 0);
-    return (sum / valid.length).toFixed(2);
-  })();
-
-  const avgCSMin = (() => {
-    const valid = matches.filter(m => m.cs_per_min != null);
-    if (!valid.length) return "—";
-    return (valid.reduce((s, m) => s + (m.cs_per_min ?? 0), 0) / valid.length).toFixed(1);
-  })();
+  const avgKDA = summary
+    ? summary.avg_deaths === 0
+      ? (summary.avg_kills + summary.avg_assists).toFixed(2)
+      : ((summary.avg_kills + summary.avg_assists) / summary.avg_deaths).toFixed(2)
+    : "—";
+  const avgCSMin = summary ? summary.avg_cs_per_min.toFixed(1) : "—";
+  const avgVision = summary ? Math.round(summary.avg_vision_score).toString() : "—";
+  const winRate = summary ? Math.round(summary.win_rate * 100) : matches.length > 0 ? Math.round(wins / matches.length * 100) : 0;
 
   return (
     <div className="content fade-up">
@@ -180,14 +217,8 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
           <div style={{ position: "relative" }}>
             <div style={{ width: 96, height: 96, borderRadius: 16, background: "var(--accent)", overflow: "hidden", display: "grid", placeItems: "center", fontFamily: "var(--ff-display)", fontSize: 36, fontWeight: 700, color: "#0a0613" }}>
               {profileIconUrl ? (
-                <img
-                  src={profileIconUrl}
-                  alt="Profile icon"
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                  onError={e => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                    (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.removeProperty("display");
-                  }}
+                <img src={profileIconUrl} alt="Profile icon" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.removeProperty("display"); }}
                 />
               ) : null}
               <span style={{ display: profileIconUrl ? "none" : undefined }}>
@@ -209,10 +240,14 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
               <span>·</span>
               <span className="green">● Online</span>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              {rank && <span className="tag accent">{rank.tier} {rank.division} · {rank.lp} LP</span>}
-              <span className="tag">{matches.length} games tracked</span>
-              {wins > 0 && <span className="tag win">{wins}W streak</span>}
+            <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+              {rank && (
+                <span className="tag accent" style={{ background: (TIER_COLOR[rank.tier.toUpperCase()] ?? "var(--accent)") + "22", borderColor: (TIER_COLOR[rank.tier.toUpperCase()] ?? "var(--accent)") + "44", color: TIER_COLOR[rank.tier.toUpperCase()] ?? "var(--accent)" }}>
+                  {rank.tier} {rank.division} · {rank.lp} LP
+                </span>
+              )}
+              {rank && <span className="tag">{rank.wins}W {rank.losses}L ({rank.wins + rank.losses > 0 ? Math.round(rank.wins / (rank.wins + rank.losses) * 100) : 0}% WR)</span>}
+              <span className="tag">{summary?.games ?? matches.length} games tracked</span>
             </div>
           </div>
 
@@ -225,12 +260,75 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
       </div>
 
       {/* Stats strip */}
-      <div className="grid-4" style={{ marginBottom: 14 }}>
-        <StatTile label="Season W/L" value={`${wins}–${losses}`} />
-        <StatTile label="Win rate" value={matches.length > 0 ? Math.round(wins / matches.length * 100) : 0} suffix="%" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 14 }}>
+        <StatTile label="Win rate · 30d" value={`${winRate}`} suffix="%" />
+        <StatTile label="W / L" value={`${summary?.wins ?? wins}–${summary?.losses ?? losses}`} />
         <StatTile label="Avg KDA" value={avgKDA} />
-        <StatTile label="CS / min" value={avgCSMin} />
+        <StatTile label="Avg CS / min" value={avgCSMin} />
+        <StatTile label="Avg vision" value={avgVision} />
       </div>
+
+      {/* Champion pool + role dist */}
+      {(champPool.length > 0 || roleDist.length > 0) && (
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14, marginBottom: 14 }}>
+          {/* Champion pool */}
+          <div className="panel">
+            <div className="panel-header">
+              <div className="panel-title"><span className="panel-title-dot" /> Champion pool · 30d</div>
+            </div>
+            <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {champPool.slice(0, 5).map(c => (
+                <div
+                  key={c.champion_id}
+                  style={{ display: "grid", gridTemplateColumns: "36px 1fr 60px 60px 80px", gap: 10, alignItems: "center", padding: "6px 8px", background: "var(--bg-3)", borderRadius: 6, cursor: "pointer" }}
+                  onClick={() => onNavigate?.("builds", { championId: c.champion_id })}
+                >
+                  <Champ id={c.champion_id.toLowerCase()} withTooltip />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 500 }}>{c.champion_id}</div>
+                    <div className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)" }}>{c.games}G · {((c.avg_kills + c.avg_assists) / Math.max(c.avg_deaths, 1)).toFixed(1)} KDA</div>
+                  </div>
+                  <div>
+                    <div className="bar" style={{ height: 4 }}>
+                      <div className="bar-fill" style={{ width: `${c.win_rate * 100}%`, background: c.win_rate >= 0.5 ? "var(--green)" : "var(--red)" }} />
+                    </div>
+                    <div className="t-mono" style={{ fontSize: 10, color: c.win_rate >= 0.5 ? "var(--green)" : "var(--red)", marginTop: 2 }}>
+                      {Math.round(c.win_rate * 100)}% WR
+                    </div>
+                  </div>
+                  <span className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)" }}>{c.avg_cs_per_min.toFixed(1)} CS/m</span>
+                  <span className="tag" style={{ fontSize: 10 }}>{c.wins}W {c.games - c.wins}L</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Role distribution */}
+          <div className="panel">
+            <div className="panel-header">
+              <div className="panel-title"><span className="panel-title-dot" /> Role distribution</div>
+            </div>
+            <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {roleDist.map(r => (
+                <div key={r.role} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span className="t-mono" style={{ fontSize: 11, fontWeight: 700 }}>{r.role}</span>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <span className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)" }}>{r.games}G</span>
+                      <span className="t-mono" style={{ fontSize: 11, color: r.win_rate >= 0.5 ? "var(--green)" : "var(--red)" }}>
+                        {Math.round(r.win_rate * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bar" style={{ height: 6 }}>
+                    <div className="bar-fill" style={{ width: `${r.win_rate * 100}%`, background: r.win_rate >= 0.5 ? "var(--green)" : "var(--red)" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Match history */}
       <div className="panel">
@@ -271,13 +369,21 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
                       <span className="match-champ-info-meta">{m.role} · {m.queue_name} · {formatRelativeTime(m.played_at)}</span>
                     </div>
                   </div>
-                  <div className="match-team" />
-                  <KDARatio k={m.kills ?? 0} d={m.deaths ?? 0} a={m.assists ?? 0} />
-                  <div className="match-prediction">
-                    <div className="match-prediction-bar">
-                      <div className="match-prediction-fill" style={{ width: `${m.result ? 60 : 40}%` }} />
+                  {/* Team composition mini */}
+                  <div className="match-team" style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    <div style={{ display: "flex", gap: 2 }}>
+                      <Champ id={m.champion_id.toLowerCase()} size="xs" />
+                      {m.ally_champions.slice(0, 4).map((id, i) => (
+                        <Champ key={i} id={id.toLowerCase()} size="xs" withTooltip />
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 2 }}>
+                      {m.enemy_champions.slice(0, 5).map((id, i) => (
+                        <Champ key={i} id={id.toLowerCase()} size="xs" withTooltip />
+                      ))}
                     </div>
                   </div>
+                  <KDARatio k={m.kills ?? 0} d={m.deaths ?? 0} a={m.assists ?? 0} />
                   <Icon name={openId === m.id ? "chevron-down" : "chevron-right"} size={14} />
                 </div>
                 {openId === m.id && (

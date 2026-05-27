@@ -41,6 +41,7 @@ export default function Dashboard() {
             selectedMatchId={selectedMatchId}
             onSelectMatch={setSelectedMatchId}
             onOpenMatchDetail={(id) => { setSelectedMatchId(id); setScreen("matchDetail"); }}
+            onNavigate={handleNavigate}
           />
         );
       case "matchDetail":

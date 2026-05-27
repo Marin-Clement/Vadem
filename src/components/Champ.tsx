@@ -7,9 +7,10 @@ interface ChampProps {
   className?: string;
   showName?: boolean;
   withTooltip?: boolean;
+  playerName?: string;
 }
 
-export function Champ({ id, size = "", className = "", showName = false, withTooltip = false }: ChampProps) {
+export function Champ({ id, size = "", className = "", showName = false, withTooltip = false, playerName }: ChampProps) {
   const ddr = useDDragon();
   const c = champById(id);
 
@@ -45,7 +46,17 @@ export function Champ({ id, size = "", className = "", showName = false, withToo
       <div className="tip-root">
         {inner}
         <div className="tip">
-          <span className="tip-name">{name}</span>
+          {playerName ? (
+            <>
+              <span className="tip-name">{playerName}</span>
+              <div className="tip-row">
+                <span className="tip-meta">CHAMP</span>
+                <span className="t-mono">{name}</span>
+              </div>
+            </>
+          ) : (
+            <span className="tip-name">{name}</span>
+          )}
           {c && (
             <>
               <div className="tip-row">

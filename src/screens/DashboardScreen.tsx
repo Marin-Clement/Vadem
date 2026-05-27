@@ -1,18 +1,47 @@
 import { useEffect, useState } from "react";
 import { Icon } from "../components/Icon";
 import { Champ } from "../components/Champ";
-import { StatTile, Sparkline, Donut, KDARatio } from "../components/Primitives";
-import { SPARK_DATA } from "../data/mockData";
+import { StatTile, Donut, KDARatio } from "../components/Primitives";
 import { listMatches, formatDuration, formatRelativeTime, type MatchListItem } from "../api/matches";
-import { getProfile, type PlayerProfile } from "../api/player";
+import { getProfile, getSummary, type PlayerProfile, type PlayerSummary } from "../api/player";
 import { getPatchDeltas, type PatchDelta } from "../api/champions";
 import { useAuthStore } from "../store/authStore";
-import { WipTag } from "../components/Wip";
 
 type Screen = "dashboard" | "profile" | "matchDetail" | "draft" | "builds" | "macro" | "overlay" | "settings";
 
+const TIER_COLOR: Record<string, string> = {
+  IRON: "#6b7280", BRONZE: "#92400e", SILVER: "#9ca3af",
+  GOLD: "#d97706", PLATINUM: "#0d9488", EMERALD: "#059669",
+  DIAMOND: "#6366f1", MASTER: "#9333ea", GRANDMASTER: "#dc2626",
+  CHALLENGER: "#f59e0b",
+};
+
+function RankBadge({ tier }: { tier: string }) {
+  const color = TIER_COLOR[tier.toUpperCase()] ?? "var(--accent)";
+  return (
+    <div style={{
+      width: 80, height: 80, borderRadius: 12, background: color + "22",
+      border: `2px solid ${color}40`, display: "grid", placeItems: "center", flexShrink: 0,
+    }}>
+      <div style={{ fontFamily: "var(--ff-display)", fontSize: 22, fontWeight: 800, color, letterSpacing: "-0.02em" }}>
+        {tier.slice(0, 1)}
+      </div>
+    </div>
+  );
+}
+
+function TeamMini({ champs }: { champs: string[] }) {
+  return (
+    <div style={{ display: "flex", gap: 2 }}>
+      {champs.slice(0, 5).map((id, i) => (
+        <Champ key={i} id={id.toLowerCase()} size="xs" withTooltip />
+      ))}
+    </div>
+  );
+}
+
 interface Props {
-  onNavigate: (s: Screen) => void;
+  onNavigate: (s: Screen, extra?: { championId?: string }) => void;
   onSelectMatch: (id: string) => void;
 }
 
@@ -20,6 +49,7 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
   const storeProfile = useAuthStore(s => s.profile);
   const setProfile = useAuthStore(s => s.setProfile);
   const [profile, setLocalProfile] = useState<PlayerProfile | null>(storeProfile);
+  const [summary, setSummary] = useState<PlayerSummary | null>(null);
   const [recent, setRecent] = useState<MatchListItem[]>([]);
   const [deltas, setDeltas] = useState<PatchDelta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,37 +57,29 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
   useEffect(() => {
     Promise.all([
       getProfile().then(p => { setLocalProfile(p); setProfile(p); }),
-      listMatches({ limit: 4 }).then(setRecent),
+      getSummary().then(setSummary).catch(() => null),
+      listMatches({ limit: 5 }).then(setRecent),
       getPatchDeltas().then(d => setDeltas(d.slice(0, 4))),
     ]).finally(() => setLoading(false));
   }, [setProfile]);
 
-  const wins = recent.filter(m => m.result).length;
   const rank = profile?.rank;
   const rankLabel = rank ? `${rank.tier} ${rank.division}` : '—';
-  const lpLabel = rank ? `${rank.lp} LP` : '';
 
-  const avgKDA = (() => {
-    const valid = recent.filter(m => m.deaths != null && m.kills != null && m.assists != null);
-    if (!valid.length) return "—";
-    const sum = valid.reduce((s, m) => {
-      const d = m.deaths === 0 ? 1 : (m.deaths ?? 1);
-      return s + ((m.kills ?? 0) + (m.assists ?? 0)) / d;
-    }, 0);
-    return (sum / valid.length).toFixed(2);
-  })();
+  // Use backend summary for aggregated stats; fall back to client calc from recent matches
+  const avgKDA = summary
+    ? summary.avg_deaths === 0
+      ? ((summary.avg_kills + summary.avg_assists)).toFixed(2)
+      : ((summary.avg_kills + summary.avg_assists) / summary.avg_deaths).toFixed(2)
+    : "—";
+  const avgCSMin = summary ? summary.avg_cs_per_min.toFixed(1) : "—";
+  const avgVision = summary ? Math.round(summary.avg_vision_score).toString() : "—";
+  const winRate = summary
+    ? Math.round(summary.win_rate * 100)
+    : recent.length > 0 ? Math.round(recent.filter(m => m.result).length / recent.length * 100) : 0;
 
-  const avgCSMin = (() => {
-    const valid = recent.filter(m => m.cs_per_min != null);
-    if (!valid.length) return "—";
-    return (valid.reduce((s, m) => s + (m.cs_per_min ?? 0), 0) / valid.length).toFixed(1);
-  })();
-
-  const avgVision = (() => {
-    const valid = recent.filter(m => m.vision_score != null);
-    if (!valid.length) return "—";
-    return Math.round(valid.reduce((s, m) => s + (m.vision_score ?? 0), 0) / valid.length).toString();
-  })();
+  const streakCount = summary?.streak ?? 0;
+  const streakWin = recent[0]?.result ?? false;
 
   return (
     <div className="content fade-up">
@@ -73,8 +95,8 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
                   Welcome back, <span className="accent">{profile?.game_name ?? '—'}</span>
                 </div>
                 <div style={{ color: "var(--fg-2)", fontSize: 13, marginTop: 4 }}>
-                  {wins > 0
-                    ? <span>You're on a <strong className="green">{wins}-game win streak</strong>. Conditions look favorable.</span>
+                  {streakCount >= 2
+                    ? <span>You're on a <strong className={streakWin ? "green" : "red"}>{streakCount}-game {streakWin ? "win" : "loss"} streak</strong>. {streakWin ? "Conditions look favorable." : "Time to review your games."}</span>
                     : <span>Ready to climb? Let's review your recent games.</span>}
                 </div>
               </div>
@@ -86,10 +108,10 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
             </div>
 
             <div className="grid-4">
-              <StatTile label="Win rate · 14d" value={loading ? "…" : `${recent.length > 0 ? Math.round(wins / recent.length * 100) : 0}`} suffix="%" />
+              <StatTile label="Win rate · 30d" value={loading ? "…" : `${winRate}`} suffix="%" />
               <StatTile label="Avg KDA" value={loading ? "…" : avgKDA} />
               <StatTile label="CS / min" value={loading ? "…" : avgCSMin} />
-              <StatTile label="Vision score" value={loading ? "…" : avgVision} />
+              <StatTile label="Avg vision" value={loading ? "…" : avgVision} />
             </div>
           </div>
         </div>
@@ -104,67 +126,72 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
           </div>
           <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{
-                width: 80, height: 80, borderRadius: 12, background: "var(--accent)",
-                display: "grid", placeItems: "center", flexShrink: 0,
-              }}>
-                <div style={{ width: 64, height: 64, borderRadius: 8, background: "var(--bg-2)", display: "grid", placeItems: "center" }}>
+              {rank ? <RankBadge tier={rank.tier} /> : (
+                <div style={{ width: 80, height: 80, borderRadius: 12, background: "var(--bg-3)", display: "grid", placeItems: "center", flexShrink: 0 }}>
                   <Icon name="trophy" size={28} />
                 </div>
-              </div>
+              )}
               <div>
                 <div className="t-display" style={{ fontSize: 22, fontWeight: 600 }}>
                   {loading ? '…' : rankLabel}
                 </div>
-                <div className="t-mono" style={{ fontSize: 12, color: "var(--fg-2)", marginTop: 2 }}>
-                  {lpLabel}
+                {rank && (
+                  <div className="t-mono" style={{ fontSize: 12, color: "var(--fg-2)", marginTop: 2 }}>
+                    {rank.lp} LP · {rank.wins}W {rank.losses}L
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {rank && (
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)", letterSpacing: "0.10em" }}>LP PROGRESS</span>
+                  <span className="t-mono" style={{ fontSize: 11 }}>{rank.lp} / 100</span>
+                </div>
+                <div className="bar">
+                  <div className="bar-fill" style={{
+                    width: `${rank.lp}%`,
+                    background: TIER_COLOR[rank.tier.toUpperCase()] ?? "var(--accent)",
+                  }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+                  <span className="t-mono" style={{ fontSize: 10, color: "var(--green)" }}>
+                    {rank.wins}W
+                  </span>
+                  <span className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)" }}>
+                    {rank.wins + rank.losses > 0 ? Math.round(rank.wins / (rank.wins + rank.losses) * 100) : 0}% WR
+                  </span>
+                  <span className="t-mono" style={{ fontSize: 10, color: "var(--red)" }}>
+                    {rank.losses}L
+                  </span>
                 </div>
               </div>
-            </div>
-
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)", letterSpacing: "0.10em" }}>
-                  LP PROGRESS
-                </span>
-                <span className="t-mono" style={{ fontSize: 11 }}>{rank?.lp ?? 0} / 100</span>
-              </div>
-              <div className="bar"><div className="bar-fill" style={{ width: `${rank?.lp ?? 0}%` }} /></div>
-            </div>
-
-            <div className="divider" style={{ margin: 0 }} />
-
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <div className="t-eyebrow">Last 30 days · Winrate trend</div>
-                <WipTag />
-              </div>
-              <Sparkline data={SPARK_DATA} />
-            </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Three-col row */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
-        {/* Today's session */}
+        {/* Session summary */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title">
               <span className="panel-title-dot" style={{ background: "var(--green)", boxShadow: "0 0 6px var(--green-soft)" }} />
-              Recent · {recent.length} games
+              {summary ? `${summary.games} games tracked` : `Recent · ${recent.length}`}
             </div>
             <button className="panel-action" onClick={() => onNavigate("profile")}>VIEW ALL →</button>
           </div>
           <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {loading ? (
               <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>Loading…</div>
-            ) : (
+            ) : summary ? (
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <Donut value={recent.length > 0 ? Math.round(wins / recent.length * 100) : 0} size={60} stroke={6} label="W RATE" />
+                <Donut value={Math.round(summary.win_rate * 100)} size={60} stroke={6} label="W RATE" />
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
                   <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-2)" }}>
-                    {wins}W · {recent.length - wins}L
+                    {summary.wins}W · {summary.losses}L
                   </div>
                   <div style={{ display: "flex", gap: 4 }}>
                     {recent.map(m => (
@@ -182,24 +209,31 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
                   </div>
                 </div>
               </div>
+            ) : (
+              <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>No data</div>
             )}
           </div>
         </div>
 
-        {/* Champion focus — shows most-played from recent matches */}
+        {/* Champion focus */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title">
               <span className="panel-title-dot" style={{ background: "var(--cyan)" }} /> Champion focus
             </div>
+            <button className="panel-action" onClick={() => recent[0] && onNavigate("builds", { championId: recent[0].champion_id })}>BUILDS →</button>
           </div>
           <div className="panel-body">
             {recent[0] ? (
-              <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                <Champ id={recent[0].champion_id.toLowerCase()} size="xl" />
-                <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <Champ id={recent[0].champion_id.toLowerCase()} size="xl" withTooltip />
+                <div>
                   <div className="t-display" style={{ fontSize: 18, fontWeight: 600 }}>{recent[0].champion_id}</div>
                   <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>{recent[0].role}</div>
+                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <span className={`tag ${recent[0].result ? "win" : "loss"}`}>{recent[0].result ? "WIN" : "LOSS"}</span>
+                    <span className="tag">{recent[0].kills ?? 0}/{recent[0].deaths ?? 0}/{recent[0].assists ?? 0}</span>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -221,7 +255,8 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
               <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>{loading ? 'Loading…' : 'No data'}</div>
             ) : (
               deltas.map(c => (
-                <div key={c.champion_id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div key={c.champion_id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+                  onClick={() => onNavigate("builds", { championId: c.champion_id })}>
                   <Champ id={c.champion_id.toLowerCase()} size="sm" />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 500 }}>{c.champion_id}</div>
@@ -239,7 +274,7 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
         </div>
       </div>
 
-      {/* Recent matches */}
+      {/* Recent matches with team compositions */}
       <div className="panel">
         <div className="panel-header">
           <div className="panel-title"><span className="panel-title-dot" /> Recent matches</div>
@@ -269,13 +304,11 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
                     <span className="match-champ-info-meta">{m.role} · {m.queue_name} · {formatRelativeTime(m.played_at)}</span>
                   </div>
                 </div>
-                <div className="match-team" />
-                <KDARatio k={m.kills ?? 0} d={m.deaths ?? 0} a={m.assists ?? 0} />
-                <div className="match-prediction">
-                  <div className="match-prediction-bar">
-                    <div className="match-prediction-fill" style={{ width: `${m.result ? 60 : 40}%` }} />
-                  </div>
+                <div className="match-team" style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <TeamMini champs={[m.champion_id, ...m.ally_champions]} />
+                  <TeamMini champs={m.enemy_champions} />
                 </div>
+                <KDARatio k={m.kills ?? 0} d={m.deaths ?? 0} a={m.assists ?? 0} />
                 <Icon name="chevron-right" size={14} />
               </div>
             ))
