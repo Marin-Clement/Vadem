@@ -34,53 +34,79 @@ export function LoginScreen() {
       width: '100vw', height: '100vh',
       display: 'grid', placeItems: 'center',
       background: 'var(--bg-0)',
+      position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ width: 400 }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+      {/* ambient glow */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse 60% 50% at 50% 50%, oklch(0.68 0.20 295 / 0.07) 0%, transparent 70%)',
+      }} />
+
+      <div style={{ width: 420, position: 'relative' }}>
+        {/* logo + wordmark */}
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <div style={{
-            width: 56, height: 56, borderRadius: 12,
-            background: 'var(--accent)', margin: '0 auto 16px',
+            width: 68, height: 68,
+            background: 'var(--accent)',
+            borderRadius: 16,
+            margin: '0 auto 20px',
             display: 'grid', placeItems: 'center',
-            fontFamily: 'var(--ff-display)', fontSize: 24, fontWeight: 700, color: '#0a0613',
-          }}>V</div>
-          <div className="t-display" style={{ fontSize: 28, fontWeight: 600 }}>VADEM</div>
-          <div style={{ color: 'var(--fg-3)', fontSize: 13, marginTop: 4 }}>
+            boxShadow: '0 0 0 1px oklch(0.68 0.20 295 / 0.5), 0 0 32px oklch(0.68 0.20 295 / 0.35), 0 8px 24px rgba(0,0,0,0.5)',
+          }}>
+            <span style={{
+              fontFamily: 'var(--ff-display)', fontSize: 28, fontWeight: 700, color: '#0a0613',
+              letterSpacing: '-0.04em',
+            }}>V</span>
+          </div>
+
+          <div className="t-display" style={{
+            fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em',
+            lineHeight: 1, color: 'var(--fg-0)',
+          }}>VADEM</div>
+
+          <div style={{
+            fontFamily: 'var(--ff-mono)', fontSize: 10, letterSpacing: '0.16em',
+            textTransform: 'uppercase', color: 'var(--fg-3)', marginTop: 8,
+          }}>
             League of Legends companion
           </div>
         </div>
 
-        <div className="panel">
+        {/* card */}
+        <div className="panel tactical" style={{
+          boxShadow: 'var(--shadow-2)',
+          border: '1px solid var(--line-2)',
+        }}>
           <div className="panel-header">
             <div className="panel-title">
               <span className="panel-title-dot" /> Connect your account
             </div>
           </div>
-          <div className="panel-body">
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          <div className="panel-body" style={{ padding: 20 }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Riot ID */}
               <div>
-                <div className="t-eyebrow" style={{ marginBottom: 6 }}>RIOT ID</div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="t-eyebrow" style={{ marginBottom: 8 }}>Riot ID</div>
+                <div style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
                   <input
-                    style={{
-                      flex: 2, padding: '8px 12px', borderRadius: 6,
-                      background: 'var(--bg-3)', border: '1px solid var(--line-2)',
-                      color: 'var(--fg-0)', fontFamily: 'var(--ff-body)', fontSize: 13,
-                      outline: 'none',
-                    }}
+                    className="login-input"
+                    style={{ flex: 2, borderRadius: 'var(--r-2) 0 0 var(--r-2)', borderRight: 0 }}
                     placeholder="Game name"
                     value={gameName}
                     onChange={e => setGameName(e.target.value)}
                     disabled={isLoading}
                     autoFocus
                   />
-                  <div style={{ display: 'flex', alignItems: 'center', color: 'var(--fg-3)', fontFamily: 'var(--ff-mono)', fontSize: 16 }}>#</div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 36, flexShrink: 0,
+                    background: 'var(--bg-4)', border: '1px solid var(--line-2)', borderLeft: 0, borderRight: 0,
+                    color: 'var(--accent)', fontFamily: 'var(--ff-mono)', fontSize: 15, fontWeight: 700,
+                  }}>#</div>
                   <input
-                    style={{
-                      flex: 1, padding: '8px 12px', borderRadius: 6,
-                      background: 'var(--bg-3)', border: '1px solid var(--line-2)',
-                      color: 'var(--fg-0)', fontFamily: 'var(--ff-body)', fontSize: 13,
-                      outline: 'none',
-                    }}
+                    className="login-input"
+                    style={{ flex: 1, borderRadius: '0 var(--r-2) var(--r-2) 0', borderLeft: 0 }}
                     placeholder="Tag"
                     value={tagLine}
                     onChange={e => setTagLine(e.target.value.replace(/^#/, ''))}
@@ -89,15 +115,11 @@ export function LoginScreen() {
                 </div>
               </div>
 
+              {/* Region */}
               <div>
-                <div className="t-eyebrow" style={{ marginBottom: 6 }}>REGION</div>
+                <div className="t-eyebrow" style={{ marginBottom: 8 }}>Region</div>
                 <select
-                  style={{
-                    width: '100%', padding: '8px 12px', borderRadius: 6,
-                    background: 'var(--bg-3)', border: '1px solid var(--line-2)',
-                    color: 'var(--fg-0)', fontFamily: 'var(--ff-body)', fontSize: 13,
-                    outline: 'none', cursor: 'pointer',
-                  }}
+                  className="login-select"
                   value={region}
                   onChange={e => setRegion(e.target.value)}
                   disabled={isLoading}
@@ -108,20 +130,30 @@ export function LoginScreen() {
                 </select>
               </div>
 
+              {/* Error */}
               {error && (
                 <div style={{
-                  padding: '10px 14px', borderRadius: 6,
-                  background: 'var(--red-soft)', border: '1px solid var(--red)',
-                  fontSize: 12, color: 'var(--red)',
+                  padding: '10px 14px', borderRadius: 'var(--r-2)',
+                  background: 'oklch(0.68 0.22 25 / 0.12)', border: '1px solid oklch(0.68 0.22 25 / 0.5)',
+                  fontSize: 12, color: 'var(--red)', lineHeight: 1.5,
                 }}>
                   {error}
                 </div>
               )}
 
+              {/* Submit */}
               <button
                 type="submit"
                 className="btn btn-primary"
-                style={{ width: '100%', padding: '10px 0', fontSize: 13 }}
+                style={{
+                  width: '100%', height: 42, fontSize: 12,
+                  fontFamily: 'var(--ff-mono)', letterSpacing: '0.12em',
+                  textTransform: 'uppercase', fontWeight: 700,
+                  boxShadow: isLoading || !gameName.trim() || !tagLine.trim()
+                    ? 'none'
+                    : '0 0 16px oklch(0.68 0.20 295 / 0.3)',
+                  transition: 'all 140ms',
+                }}
                 disabled={isLoading || !gameName.trim() || !tagLine.trim()}
               >
                 {isLoading ? 'Connecting…' : 'Connect'}
@@ -130,8 +162,13 @@ export function LoginScreen() {
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: 'var(--fg-4)' }}>
-          Riot ID is looked up via the official Riot API. No password required.
+        {/* footer note */}
+        <div style={{
+          textAlign: 'center', marginTop: 18,
+          fontFamily: 'var(--ff-mono)', fontSize: 10,
+          color: 'var(--fg-4)', letterSpacing: '0.06em',
+        }}>
+          Riot ID is looked up via the official Riot API — no password required.
         </div>
       </div>
     </div>

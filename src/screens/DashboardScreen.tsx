@@ -234,7 +234,7 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
               <div
                 key={m.id}
                 className={`match-row ${m.result ? "win" : "loss"}`}
-                onClick={() => { onSelectMatch(m.match_id); onNavigate("profile"); }}
+                onClick={() => { onSelectMatch(m.id); onNavigate("profile"); }}
               >
                 <div />
                 <div className="match-result">

@@ -2,37 +2,41 @@ import { apiFetch } from './client';
 
 export interface MatchListItem {
   id: string;
-  match_id: string;
   result: boolean;
-  queue_id: number;
   queue_name: string;
   duration_secs: number;
   played_at: string;
   champion_id: string;
   role: string;
-  kills: number;
-  deaths: number;
-  assists: number;
-  cs: number;
-  cs_per_min: number;
-  gold_earned: number;
-  damage_dealt: number;
-  vision_score: number;
+  kills: number | null;
+  deaths: number | null;
+  assists: number | null;
+  cs: number | null;
+  cs_per_min: number | null;
+  gold: number | null;
+  damage: number | null;
+  vision_score: number | null;
   items: number[];
-}
-
-export interface MatchDetail extends MatchListItem {
   ally_champions: string[];
   enemy_champions: string[];
 }
 
-export function listMatches(params?: { champion?: string; queue?: number; limit?: number }): Promise<MatchListItem[]> {
+export type MatchDetail = MatchListItem;
+
+interface MatchListResponse {
+  matches: MatchListItem[];
+  total: number;
+  has_more: boolean;
+}
+
+export async function listMatches(params?: { champion?: string; queue?: number; limit?: number }): Promise<MatchListItem[]> {
   const qs = new URLSearchParams();
   if (params?.champion) qs.set('champion', params.champion);
   if (params?.queue != null) qs.set('queue', String(params.queue));
   if (params?.limit != null) qs.set('limit', String(params.limit));
   const query = qs.toString();
-  return apiFetch(`/matches${query ? '?' + query : ''}`);
+  const res = await apiFetch<MatchListResponse>(`/matches${query ? '?' + query : ''}`);
+  return res.matches;
 }
 
 export function getMatch(matchId: string): Promise<MatchDetail> {

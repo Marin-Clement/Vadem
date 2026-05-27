@@ -33,8 +33,8 @@ function MatchDetailPanel({ matchId, onOpenFull }: { matchId: string; onOpenFull
             <div>
               <div className="t-display" style={{ fontSize: 18, fontWeight: 600 }}>{detail.champion_id}</div>
               <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                <span className={`tag ${detail.result ? "win" : "loss"}`}>{detail.cs} CS · {detail.cs_per_min.toFixed(1)}/min</span>
-                <span className="tag accent">{detail.damage_dealt.toLocaleString()} DMG</span>
+                <span className={`tag ${detail.result ? "win" : "loss"}`}>{detail.cs ?? 0} CS · {(detail.cs_per_min ?? 0).toFixed(1)}/min</span>
+                <span className="tag accent">{(detail.damage ?? 0).toLocaleString()} DMG</span>
               </div>
             </div>
           </div>
@@ -70,12 +70,12 @@ function MatchDetailPanel({ matchId, onOpenFull }: { matchId: string; onOpenFull
           <div className="t-eyebrow" style={{ marginBottom: 8 }}>MATCH STATS</div>
           <div style={{ display: "flex", gap: 14, marginBottom: 8 }}>
             <div>
-              <div className="t-display" style={{ fontSize: 28, fontWeight: 600, color: "var(--fg-3)" }}>{detail.vision_score}</div>
+              <div className="t-display" style={{ fontSize: 28, fontWeight: 600, color: "var(--fg-3)" }}>{detail.vision_score ?? 0}</div>
               <div className="t-eyebrow" style={{ fontSize: 9 }}>VISION</div>
             </div>
             <div>
               <div className="t-display" style={{ fontSize: 28, fontWeight: 600, color: "var(--fg-1)" }}>
-                {detail.gold_earned.toLocaleString()}
+                {(detail.gold ?? 0).toLocaleString()}
               </div>
               <div className="t-eyebrow" style={{ fontSize: 9 }}>GOLD</div>
             </div>
@@ -197,8 +197,8 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
             filtered.map(m => (
               <div key={m.id}>
                 <div
-                  className={`match-row ${m.result ? "win" : "loss"} ${openId === m.match_id ? "expanded" : ""}`}
-                  onClick={() => { setOpenId(openId === m.match_id ? null : m.match_id); onSelectMatch(m.match_id); }}
+                  className={`match-row ${m.result ? "win" : "loss"} ${openId === m.id ? "expanded" : ""}`}
+                  onClick={() => { setOpenId(openId === m.id ? null : m.id); onSelectMatch(m.id); }}
                 >
                   <div />
                   <div className="match-result">
@@ -219,10 +219,10 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
                       <div className="match-prediction-fill" style={{ width: `${m.result ? 60 : 40}%` }} />
                     </div>
                   </div>
-                  <Icon name={openId === m.match_id ? "chevron-down" : "chevron-right"} size={14} />
+                  <Icon name={openId === m.id ? "chevron-down" : "chevron-right"} size={14} />
                 </div>
-                {openId === m.match_id && (
-                  <MatchDetailPanel matchId={m.match_id} onOpenFull={() => onOpenMatchDetail(m.match_id)} />
+                {openId === m.id && (
+                  <MatchDetailPanel matchId={m.id} onOpenFull={() => onOpenMatchDetail(m.id)} />
                 )}
               </div>
             ))

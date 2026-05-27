@@ -50,10 +50,9 @@ export function MatchDetailScreen({ matchId, onBack }: Props) {
   }
 
   const won = match.result;
-  const kda = `${match.kills}/${match.deaths}/${match.assists}`;
-  const kdaRatio = match.deaths === 0
-    ? "Perfect"
-    : ((match.kills + match.assists) / match.deaths).toFixed(2);
+  const k = match.kills ?? 0, d = match.deaths ?? 0, a = match.assists ?? 0;
+  const kda = `${k}/${d}/${a}`;
+  const kdaRatio = d === 0 ? "Perfect" : ((k + a) / d).toFixed(2);
 
   return (
     <div className="content fade-up">
@@ -61,7 +60,7 @@ export function MatchDetailScreen({ matchId, onBack }: Props) {
         <button className="btn btn-ghost btn-sm" onClick={onBack}>
           <Icon name="chevron-left" size={12} /> Back to history
         </button>
-        <span className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>MATCH · {match.match_id}</span>
+        <span className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>MATCH · {match.id}</span>
       </div>
 
       {/* Header */}
@@ -81,9 +80,9 @@ export function MatchDetailScreen({ matchId, onBack }: Props) {
             {[
               { label: "KDA",  val: kda },
               { label: "RATIO", val: kdaRatio },
-              { label: "CS",   val: String(match.cs) },
-              { label: "DMG",  val: `${(match.damage_dealt / 1000).toFixed(1)}k` },
-              { label: "VS",   val: String(match.vision_score) },
+              { label: "CS",   val: String(match.cs ?? 0) },
+              { label: "DMG",  val: `${((match.damage ?? 0) / 1000).toFixed(1)}k` },
+              { label: "VS",   val: String(match.vision_score ?? 0) },
             ].map(s => (
               <div key={s.label}>
                 <div className="t-eyebrow">{s.label}</div>
@@ -106,9 +105,9 @@ export function MatchDetailScreen({ matchId, onBack }: Props) {
               <div className="t-display" style={{ fontSize: 22, fontWeight: 600 }}>{match.champion_id}</div>
               <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 2 }}>{match.role}</div>
               <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                <span className="tag">{match.cs} CS</span>
-                <span className="tag">{match.cs_per_min.toFixed(1)} CS/min</span>
-                <span className="tag accent">{match.gold_earned.toLocaleString()} gold</span>
+                <span className="tag">{match.cs ?? 0} CS</span>
+                <span className="tag">{(match.cs_per_min ?? 0).toFixed(1)} CS/min</span>
+                <span className="tag accent">{(match.gold ?? 0).toLocaleString()} gold</span>
               </div>
             </div>
           </div>

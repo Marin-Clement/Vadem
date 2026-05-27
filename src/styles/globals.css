@@ -696,6 +696,34 @@ html, body, #root {
 @keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .fade-up { animation: fade-up 260ms ease both; }
 
+/* =========================================================
+   Login screen inputs
+   ========================================================= */
+.login-input {
+  flex: 1; padding: 10px 14px; border-radius: var(--r-2);
+  background: var(--bg-3); border: 1px solid var(--line-2);
+  color: var(--fg-0); font-family: var(--ff-sans); font-size: 13px;
+  outline: none; transition: border-color 140ms, box-shadow 140ms;
+  min-width: 0;
+}
+.login-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.login-input::placeholder { color: var(--fg-4); }
+.login-input:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.login-select {
+  width: 100%; padding: 10px 36px 10px 14px; border-radius: var(--r-2);
+  background: var(--bg-3); border: 1px solid var(--line-2);
+  color: var(--fg-0); font-family: var(--ff-sans); font-size: 13px;
+  outline: none; cursor: pointer;
+  transition: border-color 140ms, box-shadow 140ms;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%235a6079' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.login-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.login-select:disabled { opacity: 0.45; cursor: not-allowed; }
+.login-select option { background: var(--bg-3); color: var(--fg-0); }
+
 /* Overlay windows — html, body, and #root must all be transparent */
 html:has(body[data-window="tab-overlay"]),
 html:has(body[data-window="timers-overlay"]),
