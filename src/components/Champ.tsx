@@ -14,8 +14,10 @@ export function Champ({ id, size = "", className = "", showName = false, withToo
   const c = champById(id);
 
   const name = c?.name ?? id;
-  const champId = ddr ? resolveChampId(name, ddr.champByName) : null;
+  // resolveChampId handles both lowercase mock IDs and DDragon-form IDs from the API
+  const champId = ddr ? resolveChampId(id, ddr.champByName) || resolveChampId(name, ddr.champByName) : null;
   const imgUrl = champId && ddr ? champIconUrl(ddr.version, champId) : null;
+  const initials = c?.initials ?? id.slice(0, 2).toUpperCase();
   const cls = `champ ${size} role-${(c?.role ?? "mid").toLowerCase()} ${className}`;
 
   const inner = (
@@ -33,7 +35,7 @@ export function Champ({ id, size = "", className = "", showName = false, withToo
         />
       )}
       <span style={{ position: "relative", zIndex: 2, display: imgUrl ? "none" : undefined }}>
-        {c?.initials ?? "?"}
+        {initials}
       </span>
     </div>
   );
@@ -126,6 +128,34 @@ export function ItemGlyph({ id, size = "", withTooltip = true }: ItemGlyphProps)
           {it.desc}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── DDragonItem — renders items by numeric DDragon ID (from the live API) ────
+
+interface DDragonItemProps {
+  itemId: number | null | undefined;
+  size?: "lg" | "";
+}
+
+export function DDragonItem({ itemId, size = "" }: DDragonItemProps) {
+  const ddr = useDDragon();
+
+  if (!itemId) return <div className={`item empty ${size}`}>—</div>;
+
+  const imgUrl = ddr ? itemIconUrl(ddr.version, String(itemId)) : null;
+
+  return (
+    <div className={`item ${size}`} style={{ position: "relative", overflow: "hidden" }}>
+      {imgUrl && (
+        <img
+          src={imgUrl}
+          alt={String(itemId)}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 1 }}
+          onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+        />
+      )}
     </div>
   );
 }

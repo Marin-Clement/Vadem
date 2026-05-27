@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { AppShell } from "../components/AppShell";
+import { LoginScreen } from "../screens/LoginScreen";
+import { useAuthStore } from "../store/authStore";
 import { DashboardScreen } from "../screens/DashboardScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { DraftScreen } from "../screens/DraftScreen";
@@ -12,6 +14,7 @@ import { MatchDetailScreen } from "../screens/MatchDetailScreen";
 type Screen = "dashboard" | "profile" | "matchDetail" | "draft" | "builds" | "macro" | "overlay" | "settings";
 
 export default function Dashboard() {
+  const jwt = useAuthStore(s => s.jwt);
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
 
@@ -47,6 +50,8 @@ export default function Dashboard() {
       default:         return null;
     }
   };
+
+  if (!jwt) return <LoginScreen />;
 
   return (
     <AppShell screen={screen} onNavigate={setScreen}>

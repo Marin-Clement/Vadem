@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Icon } from "./Icon";
-import { PLAYER } from "../data/mockData";
 import { useGameState } from "../hooks/useGameState";
+import { useAuthStore } from "../store/authStore";
 
 type Screen = "dashboard" | "profile" | "matchDetail" | "draft" | "builds" | "macro" | "overlay" | "settings";
 
@@ -35,7 +35,12 @@ interface AppShellProps {
 
 export function AppShell({ children, screen, onNavigate }: AppShellProps) {
   const game = useGameState();
+  const profile = useAuthStore(s => s.profile);
   const [searchFocused, setSearchFocused] = useState(false);
+
+  const handle = profile?.game_name ?? '—';
+  const tag    = profile?.tag_line ?? '—';
+  const initials = handle.slice(0, 2).toUpperCase();
   const [eyebrow, title] = SCREEN_LABEL[screen] || ["", ""];
 
   const gameTimeStr = () => {
@@ -140,10 +145,10 @@ export function AppShell({ children, screen, onNavigate }: AppShellProps) {
                 </span>
               )}
               <div className="user-chip">
-                <div className="user-chip-avatar">WC</div>
+                <div className="user-chip-avatar">{initials}</div>
                 <div>
-                  <div className="user-chip-name">{PLAYER.handle}</div>
-                  <div className="user-chip-tag">#{PLAYER.tag}</div>
+                  <div className="user-chip-name">{handle}</div>
+                  <div className="user-chip-tag">#{tag}</div>
                 </div>
               </div>
             </div>
