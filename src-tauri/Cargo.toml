@@ -23,6 +23,7 @@ ort                = { version = "2.0.0-rc.12", features = ["download-binaries"]
 rdev               = "0.5"
 parking_lot        = "0.12"
 anyhow             = "1"
+dirs               = "5"
 tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 

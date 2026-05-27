@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppShell } from "../components/AppShell";
 import { LoginScreen } from "../screens/LoginScreen";
 import { useAuthStore } from "../store/authStore";
@@ -18,6 +18,12 @@ export default function Dashboard() {
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [buildsChampionId, setBuildsChampionId] = useState<string>("syndra");
+
+  // Apply persisted theme on startup
+  useEffect(() => {
+    const saved = localStorage.getItem("vadem_theme");
+    if (saved) document.documentElement.setAttribute("data-theme", saved);
+  }, []);
 
   const handleNavigate = (s: Screen, extra?: { championId?: string }) => {
     if (s === "builds" && extra?.championId) {

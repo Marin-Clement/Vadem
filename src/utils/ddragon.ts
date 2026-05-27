@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 interface DDragonCache {
   version: string;
   champByName: Record<string, string>; // lowercase name/id → DDragon champion id
+  champByKey: Record<string, string>;  // numeric key string → DDragon champion id
   itemByName: Record<string, string>;  // lowercase name → DDragon item id string
 }
 
@@ -21,9 +22,11 @@ export async function getDDragon(): Promise<DDragonCache> {
   ]);
 
   const champByName: Record<string, string> = {};
-  for (const [id, data] of Object.entries(champData.data as Record<string, { name: string }>)) {
+  const champByKey: Record<string, string> = {};
+  for (const [id, data] of Object.entries(champData.data as Record<string, { name: string; key: string }>)) {
     champByName[data.name.toLowerCase()] = id;
     champByName[id.toLowerCase()] = id;
+    champByKey[data.key] = id;
   }
 
   const itemByName: Record<string, string> = {};
@@ -31,7 +34,7 @@ export async function getDDragon(): Promise<DDragonCache> {
     itemByName[data.name.toLowerCase()] = id;
   }
 
-  cache = { version, champByName, itemByName };
+  cache = { version, champByName, champByKey, itemByName };
   return cache;
 }
 

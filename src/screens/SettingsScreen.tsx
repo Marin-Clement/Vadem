@@ -40,19 +40,32 @@ export function SettingsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getSettings().then(setSettings).catch(() => setError("Could not load settings"));
-  }, []);
+    // Apply persisted theme immediately (before API load)
+    const saved = localStorage.getItem("vadem_theme");
+    if (saved) document.documentElement.setAttribute("data-theme", saved);
+
+    getSettings().then(s => { setSettings(s); applySettings(s); }).catch(() => setError("Could not load settings"));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const applySettings = (s: UserSettings) => {
+    // Theme
+    document.documentElement.setAttribute("data-theme", s.theme);
+    localStorage.setItem("vadem_theme", s.theme);
+  };
 
   const update = async (patch: Partial<Omit<UserSettings, 'user_id'>>) => {
     if (!settings) return;
     const optimistic = { ...settings, ...patch };
     setSettings(optimistic);
+    applySettings(optimistic);
     setSaving(true);
     try {
       const updated = await updateSettings(patch);
       setSettings(updated);
+      applySettings(updated);
     } catch {
-      setSettings(settings); // rollback
+      setSettings(settings);
+      applySettings(settings); // rollback
       setError("Failed to save setting");
     } finally {
       setSaving(false);

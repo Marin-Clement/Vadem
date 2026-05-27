@@ -1,9 +1,25 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Champ } from "../components/Champ";
 import { Icon } from "../components/Icon";
 import { useDDragon } from "../utils/ddragon";
 import { analyzeDraft, type DraftAnalysisResponse } from "../api/draft";
 import { getCounters, type MatchupEntry } from "../api/builds";
+
+interface LcuTeamSlot {
+  championId: number;
+  position: string;
+  isMe: boolean;
+  summonerId: number;
+}
+
+interface LcuChampSelectState {
+  myTeam: LcuTeamSlot[];
+  theirTeam: LcuTeamSlot[];
+  myTeamBans: number[];
+  theirTeamBans: number[];
+  phase: string;
+}
 
 const ROLES = ["TOP", "JNG", "MID", "BOT", "SUP"] as const;
 type Role = typeof ROLES[number];
@@ -84,6 +100,9 @@ export function DraftScreen() {
   const [champFilter, setChampFilter] = useState("ALL");
   const [champSearch, setChampSearch] = useState("");
   const [recommendations, setRecommendations] = useState<{ id: string; score: number; why: string }[]>([]);
+  const [lcuStatus, setLcuStatus] = useState<"idle" | "polling" | "active" | "error">("idle");
+  const [lcuError, setLcuError] = useState<string | null>(null);
+  const lcuPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Resolve all champion IDs from DDragon for the picker grid
   const allChampIds = ddr
@@ -132,6 +151,71 @@ export function DraftScreen() {
     if (team === "blue") setBlueRoster(roster);
     else setRedRoster(roster);
   };
+
+  const applyLcuState = useCallback((state: LcuChampSelectState) => {
+    if (!ddr) return;
+    const keyToId = (key: number): string | null => {
+      if (key <= 0) return null;
+      return ddr.champByKey[String(key)] ?? null;
+    };
+
+    // Build blue roster (myTeam) by position order
+    const posOrder: Record<string, number> = { TOP: 0, JUNGLE: 1, MIDDLE: 2, BOTTOM: 3, UTILITY: 4, "": 0 };
+    const sortedMy = [...state.myTeam].sort((a, b) => (posOrder[a.position.toUpperCase()] ?? 0) - (posOrder[b.position.toUpperCase()] ?? 0));
+    const sortedTheir = [...state.theirTeam].sort((a, b) => (posOrder[a.position.toUpperCase()] ?? 0) - (posOrder[b.position.toUpperCase()] ?? 0));
+
+    const newBlue = ROLES.map((role, i) => {
+      const slot = sortedMy[i];
+      const champId = slot ? keyToId(slot.championId) : null;
+      return { role, id: champId };
+    });
+
+    const newRed = ROLES.map((role, i) => {
+      const slot = sortedTheir[i];
+      const champId = slot ? keyToId(slot.championId) : null;
+      return { role, id: champId };
+    });
+
+    const newBlueBans = state.myTeamBans.map(keyToId).filter(Boolean) as string[];
+    const newRedBans = state.theirTeamBans.map(keyToId).filter(Boolean) as string[];
+
+    setBlueRoster(newBlue);
+    setRedRoster(newRed);
+    setBlueBans(newBlueBans);
+    setRedBans(newRedBans);
+  }, [ddr]);
+
+  const syncLcu = useCallback(async () => {
+    try {
+      const state = await invoke<LcuChampSelectState>("get_lcu_champ_select");
+      applyLcuState(state);
+      setLcuStatus("active");
+      setLcuError(null);
+    } catch (e) {
+      const msg = String(e);
+      setLcuError(msg.includes("not running") ? "Client not running" : msg.includes("Not in") ? "Not in champion select" : msg);
+      setLcuStatus("error");
+    }
+  }, [applyLcuState]);
+
+  const startLcuPolling = useCallback(() => {
+    if (lcuPollRef.current) return;
+    setLcuStatus("polling");
+    syncLcu();
+    lcuPollRef.current = setInterval(syncLcu, 3000);
+  }, [syncLcu]);
+
+  const stopLcuPolling = useCallback(() => {
+    if (lcuPollRef.current) {
+      clearInterval(lcuPollRef.current);
+      lcuPollRef.current = null;
+    }
+    setLcuStatus("idle");
+    setLcuError(null);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => () => { if (lcuPollRef.current) clearInterval(lcuPollRef.current); }, []);
 
   const handleAnalyze = useCallback(async () => {
     const blue = blueRoster.filter(p => p.id).map(p => p.id!);
@@ -207,7 +291,18 @@ export function DraftScreen() {
           </span>
         )}
         <div style={{ flex: 1 }} />
-        <button className="btn btn-ghost btn-sm" onClick={() => { setBlueRoster(emptyRoster()); setRedRoster(emptyRoster()); setBlueBans([]); setRedBans([]); setAnalysis(null); }}>
+        {lcuStatus === "polling" || lcuStatus === "active" ? (
+          <button className="btn btn-sm" style={{ background: "var(--green-soft)", color: "var(--green)", border: "1px solid var(--green)" }} onClick={stopLcuPolling}>
+            <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--green)", marginRight: 4 }} />
+            Live · Disconnect
+          </button>
+        ) : (
+          <button className="btn btn-ghost btn-sm" onClick={startLcuPolling} title="Auto-fill from League Client">
+            <Icon name="draft" size={12} /> Sync from Client
+          </button>
+        )}
+        {lcuError && <span className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)" }}>{lcuError}</span>}
+        <button className="btn btn-ghost btn-sm" onClick={() => { setBlueRoster(emptyRoster()); setRedRoster(emptyRoster()); setBlueBans([]); setRedBans([]); setAnalysis(null); stopLcuPolling(); }}>
           <Icon name="swap" size={12} /> Reset
         </button>
       </div>
