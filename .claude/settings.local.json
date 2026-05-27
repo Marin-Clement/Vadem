@@ -4,7 +4,8 @@
       "Bash(powershell -Command \"Get-PSDrive -PSProvider FileSystem | Select-Object Name, Root\")",
       "Bash(powershell -Command \"Get-ChildItem -Path 'C:\\\\','G:\\\\' -Filter 'game.cfg' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 10 FullName\")",
       "Bash(powershell -Command \"C:\\\\Users\\\\marin\\\\.cargo\\\\bin\\\\cargo.exe check --manifest-path 'c:\\\\Users\\\\marin\\\\RiderProjects\\\\YuumiPal-Tauri\\\\src-tauri\\\\Cargo.toml' 2>&1\")",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\marin\\\\RiderProjects\\\\YuumiPal-Tauri\\\\src-tauri\\\\Cargo.toml\" -Pattern \"yuumipal|YuumiPal\" -CaseSensitive:$false)"
     ]
   }
 }

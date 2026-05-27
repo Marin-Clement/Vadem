@@ -1,5 +1,5 @@
 // =========================================================
-// YuumiPal — mock data (real LoL champion/item names)
+// Vadem — mock data (real LoL champion/item names)
 // Will be replaced by live Riot API data once backend is up
 // =========================================================
 

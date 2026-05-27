@@ -79,7 +79,7 @@ export default function TabOverlay() {
                 display: "inline-block", width: 6, height: 6, borderRadius: "50%",
                 background: "var(--green)", boxShadow: "0 0 6px var(--green)",
               }} />
-              YuumiPal · Live
+              Vadem · Live
             </div>
             <span className="overlay-time">{timeStr}</span>
           </div>

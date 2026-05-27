@@ -1,12 +1,12 @@
 [package]
-name = "yuumipal"
+name = "vadem"
 version = "2.0.0"
-description = "YuumiPal — League of Legends overlay"
+description = "Vadem — League of Legends overlay"
 authors = ["marin"]
 edition = "2021"
 
 [lib]
-name = "yuumipal_lib"
+name = "vadem_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -4756,6 +4756,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "vadem"
+version = "2.0.0"
+dependencies = [
+ "anyhow",
+ "ort",
+ "parking_lot",
+ "rdev",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-store",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "valuable"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5728,25 +5747,6 @@ dependencies = [
  "quote",
  "syn 2.0.117",
  "synstructure",
-]
-
-[[package]]
-name = "yuumipal"
-version = "2.0.0"
-dependencies = [
- "anyhow",
- "ort",
- "parking_lot",
- "rdev",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-store",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

@@ -56,7 +56,7 @@ export function AppShell({ children, screen, onNavigate }: AppShellProps) {
         <div className="titlebar-left">
           <div className="titlebar-brand">
             <div className="titlebar-brand-mark" />
-            YUUMIPAL
+            VADEM
           </div>
           <div className="titlebar-status">
             <span className="titlebar-status-item">

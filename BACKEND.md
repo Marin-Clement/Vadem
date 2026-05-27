@@ -1,4 +1,4 @@
-# YuumiPal — VPS Backend Architecture
+# Vadem — VPS Backend Architecture
 
 > **Scope**: everything that does NOT run locally on the player's machine.
 > Local: ONNX win inference, LoL Live Client polling (127.0.0.1:2999), keyboard hooks, summoner spell timers.
@@ -34,7 +34,7 @@
                      │  HTTPS (REST + WebSocket)
                      ▼
 ┌─────────────────────────────────────────────────────────┐
-│  VPS — YuumiPal API  (Axum, port 443 via nginx)        │
+│  VPS — Vadem API  (Axum, port 443 via nginx)            │
 │                                                         │
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐ │
 │  │ Auth module │  │ Riot API     │  │ AI Coach       │ │
@@ -61,7 +61,7 @@
 
 ## API surface
 
-Base URL: `https://api.yuumipal.gg/v1`
+Base URL: `https://api.vadem.gg/v1`
 
 ### Auth
 
@@ -297,13 +297,13 @@ CREATE TABLE rate_limits (
 ## Redis key patterns
 
 ```
-yuumipal:session:{jwt_jti}               → user_id (TTL = token expiry)
-yuumipal:champ_stats:{patch}:{rank}      → JSON blob (TTL = 24h)
-yuumipal:build:{champion}:{patch}:{rank} → JSON blob (TTL = 24h, invalidated on patch)
-yuumipal:draft_matrix:{patch}            → serialized lookup table (TTL = 14d)
-yuumipal:ratelimit:{user_id}:coach:live  → count (TTL = 10s sliding)
-yuumipal:ratelimit:{user_id}:coach:post  → count (TTL = 2m sliding)
-yuumipal:player_summary:{puuid}          → JSON (TTL = 5min — freshness vs cost tradeoff)
+vadem:session:{jwt_jti}               → user_id (TTL = token expiry)
+vadem:champ_stats:{patch}:{rank}      → JSON blob (TTL = 24h)
+vadem:build:{champion}:{patch}:{rank} → JSON blob (TTL = 24h, invalidated on patch)
+vadem:draft_matrix:{patch}            → serialized lookup table (TTL = 14d)
+vadem:ratelimit:{user_id}:coach:live  → count (TTL = 10s sliding)
+vadem:ratelimit:{user_id}:coach:post  → count (TTL = 2m sliding)
+vadem:player_summary:{puuid}          → JSON (TTL = 5min — freshness vs cost tradeoff)
 ```
 
 ---
@@ -351,13 +351,13 @@ Production API key limits: ~20 req/s per region, 100 req/2min.
 ## VPS deployment
 
 ```
-/srv/yuumipal/
+/srv/vadem/
 ├── api           # Compiled Rust binary (cross-compiled or built on VPS)
 ├── .env          # Secrets (not in git)
 └── migrations/   # SQL migrations (sqlx-cli)
 
-/etc/nginx/sites-enabled/yuumipal
-/etc/systemd/system/yuumipal-api.service
+/etc/nginx/sites-enabled/vadem
+/etc/systemd/system/vadem-api.service
 ```
 
 **Deploy flow**:
@@ -366,7 +366,7 @@ git push → GitHub Actions CI:
   1. cargo test --workspace
   2. cargo build --release --target x86_64-unknown-linux-gnu
   3. scp binary to VPS
-  4. systemctl restart yuumipal-api
+  4. systemctl restart vadem-api
   5. sqlx migrate run (zero-downtime with backward-compatible migrations)
 ```
 

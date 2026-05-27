@@ -23,7 +23,7 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
           <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <div className="t-eyebrow" style={{ marginBottom: 6 }}>YuumiPal // Briefing</div>
+                <div className="t-eyebrow" style={{ marginBottom: 6 }}>Vadem // Briefing</div>
                 <div className="t-display" style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em" }}>
                   Welcome back, <span className="accent">{PLAYER.handle}</span>
                 </div>

@@ -20,12 +20,12 @@ use services::{league_poller, ml_service::MlService};
 
 pub fn run() {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::new("yuumipal=info"))
+        .with_env_filter(EnvFilter::new("vadem=info"))
         .init();
 
     // ort rc.12 requires an explicit global environment init before any Session
     // is created. Without this, type.rs hits `not yet implemented` panics.
-    let _ort_ok = ort::init().with_name("yuumipal").commit();
+    let _ort_ok = ort::init().with_name("vadem").commit();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -46,12 +46,12 @@ pub fn run() {
                 std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                     .parent()
                     .expect("project root not found")
-                    .join("yuumipal_win_model.onnx")
+                    .join("vadem_win_model.onnx")
             } else {
                 app.path()
                     .resource_dir()
                     .expect("resource dir not found")
-                    .join("yuumipal_win_model.onnx")
+                    .join("vadem_win_model.onnx")
             };
 
             match MlService::load(model_path.to_str().unwrap()) {

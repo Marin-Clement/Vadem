@@ -44,7 +44,7 @@ function OverlayWidget({ position, isLive, prob, timeStr, goldLead }: WidgetProp
             background: isLive ? "var(--green)" : "var(--amber)",
             boxShadow: `0 0 6px ${isLive ? "var(--green)" : "var(--amber)"}`,
           }} />
-          YuumiPal · {isLive ? "Live" : "Preview"}
+          Vadem · {isLive ? "Live" : "Preview"}
         </div>
         <span className="overlay-time">{timeStr}</span>
       </div>
@@ -225,7 +225,7 @@ export function OverlayPreviewScreen() {
       {/* Info panel: what the model reads */}
       <div className="panel">
         <div className="panel-header">
-          <div className="panel-title"><span className="panel-title-dot" /> YuumiPal Win Model · feature inputs</div>
+          <div className="panel-title"><span className="panel-title-dot" /> Vadem Win Model · feature inputs</div>
           <span className="t-mono fg-3" style={{ fontSize: 10 }}>ONNX LOCAL INFERENCE</span>
         </div>
         <div className="panel-body">
