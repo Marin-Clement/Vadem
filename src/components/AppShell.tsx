@@ -110,7 +110,6 @@ export function AppShell({ children, screen, onNavigate }: AppShellProps) {
       <div className="titlebar">
         <div className="titlebar-left">
           <div className="titlebar-brand">
-            <img src={logoUrl} alt="Vadem" style={{ height: 18, width: "auto", display: "block" }} />
             VADEM
           </div>
           <div className="titlebar-status">
@@ -143,7 +142,9 @@ export function AppShell({ children, screen, onNavigate }: AppShellProps) {
       <div className="app-shell">
         {/* Sidebar */}
         <aside className="sidebar">
-          <div className="sidebar-logo">Y</div>
+          <div className="sidebar-logo">
+            <img src={logoUrl} alt="Vadem" style={{ width: 28, height: "auto", display: "block" }} />
+          </div>
           {NAV.map(n => (
             <div
               key={n.id}
