@@ -78,3 +78,36 @@ export function getPublicProfile(puuid: string, gameName: string, tagLine: strin
   const qs = new URLSearchParams({ game_name: gameName, tag_line: tagLine });
   return apiFetch(`/players/${puuid}/profile?${qs}`);
 }
+
+export interface PublicMatchItem {
+  match_id: string;
+  champion_id: string;
+  role: string;
+  result: boolean;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+  duration_secs: number;
+  played_at: number; // ms timestamp
+  queue_name: string;
+  ally_champions: string[];
+  ally_names: string[];
+  ally_puuids: string[];
+  enemy_champions: string[];
+  enemy_names: string[];
+  enemy_puuids: string[];
+}
+
+export interface FullPublicProfile {
+  profile: PlayerProfile;
+  summary: PlayerSummary;
+  champ_pool: ChampionPoolEntry[];
+  role_dist: RoleDist[];
+  matches: PublicMatchItem[];
+}
+
+export function getFullPublicProfile(puuid: string, gameName: string, tagLine: string): Promise<FullPublicProfile> {
+  const qs = new URLSearchParams({ game_name: gameName, tag_line: tagLine });
+  return apiFetch(`/players/${puuid}/full-profile?${qs}`);
+}

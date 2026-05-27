@@ -75,6 +75,7 @@ export default function Dashboard() {
             gameName={playerTarget.gameName}
             tagLine={playerTarget.tagLine}
             onBack={() => setScreen(prevScreen)}
+            onViewPlayer={navigateToPlayer}
           />
         ) : null;
       case "draft":    return <DraftScreen />;
