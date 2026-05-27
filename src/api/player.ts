@@ -69,3 +69,7 @@ export function getRoleDist(): Promise<RoleDist[]> {
 export function syncMatches(): Promise<{ synced: number }> {
   return apiFetch('/players/me/sync', { method: 'POST' });
 }
+
+export function triggerGlobalCrawl(): Promise<{ status: string }> {
+  return apiFetch('/players/me/crawl-global', { method: 'POST' });
+}

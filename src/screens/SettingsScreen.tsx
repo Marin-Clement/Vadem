@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore";
 import { getSettings, updateSettings, type UserSettings } from "../api/settings";
+import { triggerGlobalCrawl } from "../api/player";
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -38,6 +39,7 @@ export function SettingsScreen() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [crawling, setCrawling] = useState(false);
 
   useEffect(() => {
     // Apply persisted theme immediately (before API load)
@@ -207,6 +209,35 @@ export function SettingsScreen() {
                 <span className="t-mono" style={{ fontSize: 12, minWidth: 32 }}>{settings.confidence_min}%</span>
               </div>
             ) : <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>…</div>}
+          </div>
+        </div>
+      </div>
+
+      {/* Data */}
+      <div className="panel" style={{ marginBottom: 14 }}>
+        <div className="panel-header">
+          <div className="panel-title"><span className="panel-title-dot" /> Data pipeline</div>
+        </div>
+        <div className="panel-body" style={{ padding: "0 16px" }}>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-name">Global champion stats</div>
+              <div className="settings-row-desc">
+                Crawl challenger/GM matches to populate build recommendations and draft matchup data.
+                Runs automatically every 6h — trigger manually here.
+              </div>
+            </div>
+            <button
+              className="btn btn-sm"
+              disabled={crawling}
+              onClick={async () => {
+                setCrawling(true);
+                try { await triggerGlobalCrawl(); } catch { /* fire and forget */ }
+                finally { setTimeout(() => setCrawling(false), 3000); }
+              }}
+            >
+              {crawling ? "Starting…" : "Run crawl"}
+            </button>
           </div>
         </div>
       </div>
