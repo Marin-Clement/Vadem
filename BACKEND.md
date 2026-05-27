@@ -76,16 +76,16 @@ The client stores the JWT in Tauri's secure store. All subsequent calls include 
 
 ---
 
-### Player / Profile
+  ### Player / Profile
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET`  | `/players/me`               | Current player profile (summoner info, rank, region) |
-| `GET`  | `/players/me/summary`       | Aggregated stats (winrate, avg KDA, CS/min, LP trend) |
-| `GET`  | `/players/me/champion-pool` | Per-champion stats for the last 30/60/90 days |
-| `GET`  | `/players/me/role-dist`     | Role distribution + winrate per role |
-| `POST` | `/players/me/sync`          | Trigger a full match history pull from Riot API |
-| `GET`  | `/players/{puuid}/profile`  | Another player's public profile (for comparison) |
+  | Method | Path | Description |
+  |--------|------|-------------|
+  | `GET`  | `/players/me`               | Current player profile (summoner info, rank, region) |
+  | `GET`  | `/players/me/summary`       | Aggregated stats (winrate, avg KDA, CS/min, LP trend) |
+  | `GET`  | `/players/me/champion-pool` | Per-champion stats for the last 30/60/90 days |
+  | `GET`  | `/players/me/role-dist`     | Role distribution + winrate per role |
+  | `POST` | `/players/me/sync`          | Trigger a full match history pull from Riot API |
+  | `GET`  | `/players/{puuid}/profile`  | Another player's public profile (for comparison) |
 
 ---
 

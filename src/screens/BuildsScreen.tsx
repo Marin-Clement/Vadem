@@ -1,20 +1,4 @@
-import { Champ } from "../components/Champ";
-import { ITEMS } from "../data/mockData";
-
-function ItemGlyph({ id, size = "" }: { id: string; size?: string }) {
-  const it = ITEMS[id];
-  if (!it) return <div className={`item ${size}`}>?</div>;
-  return (
-    <div className="tip-root">
-      <div className={`item ${it.tier} ${size}`}>{it.glyph}</div>
-      <div className="tip">
-        <span className="tip-name">{it.name}</span>
-        <div className="tip-row"><span className="tip-meta">{it.tier.toUpperCase()}</span></div>
-        <div style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 6, whiteSpace: "normal", maxWidth: 220 }}>{it.desc}</div>
-      </div>
-    </div>
-  );
-}
+import { Champ, ItemGlyph } from "../components/Champ";
 
 const builds = [
   {

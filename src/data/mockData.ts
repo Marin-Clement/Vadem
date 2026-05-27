@@ -17,6 +17,7 @@ export interface Item {
   glyph: string;
   tier: "mythic" | "legendary" | "boots" | "component";
   desc: string;
+  ddragonId?: number;
 }
 
 export interface MatchMoment {
@@ -108,19 +109,19 @@ export const champById = (id: string): Champion | undefined =>
   CHAMPIONS.find(c => c.id === id);
 
 export const ITEMS: Record<string, Item> = {
-  ludens:       { id: "ludens",       name: "Luden's Tempest",     glyph: "LT", tier: "mythic",    desc: "Ability power, haste, magic pen. Echo: Q/W/E/R hits echo on nearby enemies." },
-  shadowflame:  { id: "shadowflame",  name: "Shadowflame",         glyph: "SF", tier: "mythic",    desc: "Ability power, magic pen. Cinderbloom: spells deal bonus damage on shields and low-HP enemies." },
-  triforce:     { id: "triforce",     name: "Trinity Force",       glyph: "TF", tier: "mythic",    desc: "AD, attack speed, haste. Spellblade: next auto after spell deals bonus damage." },
-  rabadons:     { id: "rabadons",     name: "Rabadon's Deathcap",  glyph: "RD", tier: "legendary", desc: "Massive AP boost. Increases total ability power by 35%." },
-  zhonyas:      { id: "zhonyas",      name: "Zhonya's Hourglass",  glyph: "ZH", tier: "legendary", desc: "Ability power, armor. Stasis: become invulnerable for 2.5s." },
-  voidstaff:    { id: "voidstaff",    name: "Void Staff",          glyph: "VS", tier: "legendary", desc: "Ability power, 45% magic penetration." },
-  infinityedge: { id: "infinityedge", name: "Infinity Edge",       glyph: "IE", tier: "legendary", desc: "Attack damage, crit. Critical strikes deal 40% bonus damage." },
-  mortal:       { id: "mortal",       name: "Mortal Reminder",     glyph: "MO", tier: "legendary", desc: "Attack damage, armor pen, grevious wounds on hit." },
-  warmogs:      { id: "warmogs",      name: "Warmog's Armor",      glyph: "WA", tier: "legendary", desc: "HP, regeneration. Regen 5% max HP every 5s out of combat." },
-  sorcshoes:    { id: "sorcshoes",    name: "Sorcerer's Shoes",    glyph: "SS", tier: "boots",     desc: "Boots — magic penetration." },
-  tabis:        { id: "tabis",        name: "Plated Steelcaps",    glyph: "TC", tier: "boots",     desc: "Boots — armor, reduces auto attack damage taken by 12%." },
-  blasting:     { id: "blasting",     name: "Blasting Wand",       glyph: "BW", tier: "component", desc: "Component — ability power." },
-  serrated:     { id: "serrated",     name: "Serrated Dirk",       glyph: "SD", tier: "component", desc: "Component — attack damage, lethality." },
+  ludens:       { id: "ludens",       name: "Luden's Echo",        glyph: "LT", tier: "mythic",    ddragonId: 6655, desc: "Ability power, haste, mana. Echo: damaging abilities fire 6 echoes dealing bonus magic damage." },
+  shadowflame:  { id: "shadowflame",  name: "Shadowflame",         glyph: "SF", tier: "mythic",    ddragonId: 4645, desc: "Ability power, magic pen. Cinderbloom: spells deal bonus damage on shields and low-HP enemies." },
+  triforce:     { id: "triforce",     name: "Trinity Force",       glyph: "TF", tier: "mythic",    ddragonId: 3078, desc: "AD, attack speed, haste. Spellblade: next auto after spell deals bonus damage." },
+  rabadons:     { id: "rabadons",     name: "Rabadon's Deathcap",  glyph: "RD", tier: "legendary", ddragonId: 3089, desc: "Massive AP boost. Increases total ability power by 35%." },
+  zhonyas:      { id: "zhonyas",      name: "Zhonya's Hourglass",  glyph: "ZH", tier: "legendary", ddragonId: 3157, desc: "Ability power, armor. Stasis: become invulnerable for 2.5s." },
+  voidstaff:    { id: "voidstaff",    name: "Void Staff",          glyph: "VS", tier: "legendary", ddragonId: 3135, desc: "Ability power, 45% magic penetration." },
+  infinityedge: { id: "infinityedge", name: "Infinity Edge",       glyph: "IE", tier: "legendary", ddragonId: 3031, desc: "Attack damage, crit. Critical strikes deal 40% bonus damage." },
+  mortal:       { id: "mortal",       name: "Mortal Reminder",     glyph: "MO", tier: "legendary", ddragonId: 3033, desc: "Attack damage, armor pen, grevious wounds on hit." },
+  warmogs:      { id: "warmogs",      name: "Warmog's Armor",      glyph: "WA", tier: "legendary", ddragonId: 3083, desc: "HP, regeneration. Regen 5% max HP every 5s out of combat." },
+  sorcshoes:    { id: "sorcshoes",    name: "Sorcerer's Shoes",    glyph: "SS", tier: "boots",     ddragonId: 3020, desc: "Boots — magic penetration." },
+  tabis:        { id: "tabis",        name: "Plated Steelcaps",    glyph: "TC", tier: "boots",     ddragonId: 3047, desc: "Boots — armor, reduces auto attack damage taken by 12%." },
+  blasting:     { id: "blasting",     name: "Blasting Wand",       glyph: "BW", tier: "component", ddragonId: 1026, desc: "Component — ability power." },
+  serrated:     { id: "serrated",     name: "Serrated Dirk",       glyph: "SD", tier: "component", ddragonId: 1037, desc: "Component — attack damage, lethality." },
 };
 
 export const MATCHES: Match[] = [

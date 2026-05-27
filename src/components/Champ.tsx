@@ -1,4 +1,5 @@
 import { champById, ITEMS } from "../data/mockData";
+import { useDDragon, champIconUrl, itemIconUrl, resolveChampId, resolveItemId } from "../utils/ddragon";
 
 interface ChampProps {
   id: string;
@@ -9,20 +10,31 @@ interface ChampProps {
 }
 
 export function Champ({ id, size = "", className = "", showName = false, withTooltip = false }: ChampProps) {
+  const ddr = useDDragon();
   const c = champById(id);
-  if (!c) {
-    return (
-      <div className={`champ ${size} ${className}`}>
-        <span>?</span>
-      </div>
-    );
-  }
 
-  const cls = `champ ${size} role-${c.role.toLowerCase()} ${className}`;
+  const name = c?.name ?? id;
+  const champId = ddr ? resolveChampId(name, ddr.champByName) : null;
+  const imgUrl = champId && ddr ? champIconUrl(ddr.version, champId) : null;
+  const cls = `champ ${size} role-${(c?.role ?? "mid").toLowerCase()} ${className}`;
 
   const inner = (
     <div className={cls}>
-      <span>{c.initials}</span>
+      {imgUrl && (
+        <img
+          src={imgUrl}
+          alt={name}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 1 }}
+          onError={e => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+            const span = e.currentTarget.nextElementSibling as HTMLElement | null;
+            if (span) span.style.removeProperty("display");
+          }}
+        />
+      )}
+      <span style={{ position: "relative", zIndex: 2, display: imgUrl ? "none" : undefined }}>
+        {c?.initials ?? "?"}
+      </span>
     </div>
   );
 
@@ -31,15 +43,19 @@ export function Champ({ id, size = "", className = "", showName = false, withToo
       <div className="tip-root">
         {inner}
         <div className="tip">
-          <span className="tip-name">{c.name}</span>
-          <div className="tip-row">
-            <span className="tip-meta">ROLE</span>
-            <span className="t-mono">{c.role}</span>
-          </div>
-          <div className="tip-row">
-            <span className="tip-meta">CLASS</span>
-            <span className="t-mono">{c.tags.join(" / ")}</span>
-          </div>
+          <span className="tip-name">{name}</span>
+          {c && (
+            <>
+              <div className="tip-row">
+                <span className="tip-meta">ROLE</span>
+                <span className="t-mono">{c.role}</span>
+              </div>
+              <div className="tip-row">
+                <span className="tip-meta">CLASS</span>
+                <span className="t-mono">{c.tags.join(" / ")}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -49,13 +65,15 @@ export function Champ({ id, size = "", className = "", showName = false, withToo
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         {inner}
-        <span style={{ fontSize: 13 }}>{c.name}</span>
+        <span style={{ fontSize: 13 }}>{name}</span>
       </div>
     );
   }
 
   return inner;
 }
+
+// ── Item glyph ────────────────────────────────────────────────────────────────
 
 interface ItemGlyphProps {
   id: string | null | undefined;
@@ -64,12 +82,36 @@ interface ItemGlyphProps {
 }
 
 export function ItemGlyph({ id, size = "", withTooltip = true }: ItemGlyphProps) {
+  const ddr = useDDragon();
+
   if (!id) return <div className={`item empty ${size}`}>—</div>;
 
   const it = ITEMS[id];
   if (!it) return <div className={`item ${size}`}>?</div>;
 
-  const inner = <div className={`item ${it.tier} ${size}`}>{it.glyph}</div>;
+  const itemId = ddr ? (resolveItemId(it.name, ddr.itemByName) ?? (it.ddragonId ? String(it.ddragonId) : null)) : null;
+  const imgUrl = itemId && ddr ? itemIconUrl(ddr.version, itemId) : null;
+
+  const inner = (
+    <div className={`item ${it.tier} ${size}`} style={{ position: "relative", overflow: "hidden" }}>
+      {imgUrl && (
+        <img
+          src={imgUrl}
+          alt={it.name}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 1 }}
+          onError={e => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+            const span = e.currentTarget.nextElementSibling as HTMLElement | null;
+            if (span) span.style.removeProperty("display");
+          }}
+        />
+      )}
+      <span style={{ position: "relative", zIndex: 2, display: imgUrl ? "none" : undefined }}>
+        {it.glyph}
+      </span>
+    </div>
+  );
+
   if (!withTooltip) return inner;
 
   return (

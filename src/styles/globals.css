@@ -696,5 +696,12 @@ html, body, #root {
 @keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .fade-up { animation: fade-up 260ms ease both; }
 
-/* Overlay windows transparent bg */
-body[data-window="tab-overlay"], body[data-window="timers-overlay"] { background: transparent !important; }
+/* Overlay windows — html, body, and #root must all be transparent */
+html:has(body[data-window="tab-overlay"]),
+html:has(body[data-window="timers-overlay"]),
+body[data-window="tab-overlay"],
+body[data-window="timers-overlay"],
+body[data-window="tab-overlay"] #root,
+body[data-window="timers-overlay"] #root {
+  background: transparent !important;
+}
