@@ -156,14 +156,6 @@ export function AppShell({ children, screen, onNavigate }: AppShellProps) {
             </div>
           ))}
           <div className="sidebar-spacer" />
-          <div
-            className="nav-item"
-            title="Toggle overlay"
-            onClick={() => onNavigate("overlay")}
-          >
-            <Icon name="shield" size={18} />
-            <span className="nav-tooltip">Overlay preview</span>
-          </div>
         </aside>
 
         {/* Main */}
