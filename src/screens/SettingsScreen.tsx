@@ -1,9 +1,26 @@
-import { PLAYER } from "../data/mockData";
+import { useEffect, useState } from "react";
 import { useSettings } from "../hooks/useSettings";
-
+import { useAuthStore } from "../store/authStore";
+import { getSettings, updateSettings, type UserSettings } from "../api/settings";
 
 export function SettingsScreen() {
   const { settings, saveSettings } = useSettings();
+  const profile = useAuthStore(s => s.profile);
+  const logout = useAuthStore(s => s.logout);
+  const [remoteSettings, setRemoteSettings] = useState<UserSettings | null>(null);
+
+  useEffect(() => {
+    getSettings().then(setRemoteSettings).catch(() => {});
+  }, []);
+
+  const handleRemoteToggle = async (key: keyof Omit<UserSettings, 'user_id'>, value: boolean) => {
+    try {
+      const updated = await updateSettings({ [key]: value });
+      setRemoteSettings(updated);
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <div className="content fade-up" style={{ maxWidth: 880 }}>
@@ -18,9 +35,11 @@ export function SettingsScreen() {
           <div className="settings-row">
             <div>
               <div className="settings-row-name">Connected account</div>
-              <div className="settings-row-desc">{PLAYER.handle}#{PLAYER.tag} · {PLAYER.region}</div>
+              <div className="settings-row-desc">
+                {profile ? `${profile.game_name}#${profile.tag_line} · ${profile.region}` : '—'}
+              </div>
             </div>
-            <button className="btn btn-sm">DISCONNECT</button>
+            <button className="btn btn-sm" onClick={() => logout()}>DISCONNECT</button>
           </div>
           <div className="settings-row">
             <div>
@@ -51,8 +70,14 @@ export function SettingsScreen() {
               <div className="settings-row-desc">Dark recommended for long sessions</div>
             </div>
             <div className="seg">
-              <button className="seg-item on">DARK</button>
-              <button className="seg-item">LIGHT</button>
+              <button
+                className={`seg-item ${(remoteSettings?.theme ?? 'dark') === 'dark' ? 'on' : ''}`}
+                onClick={() => handleRemoteToggle('theme' as never, 'dark' as never)}
+              >DARK</button>
+              <button
+                className={`seg-item ${(remoteSettings?.theme ?? 'dark') === 'light' ? 'on' : ''}`}
+                onClick={() => handleRemoteToggle('theme' as never, 'light' as never)}
+              >LIGHT</button>
             </div>
           </div>
           <div className="settings-row">
@@ -60,41 +85,10 @@ export function SettingsScreen() {
               <div className="settings-row-name">Compact mode</div>
               <div className="settings-row-desc">Denser layouts, smaller padding</div>
             </div>
-            <div className="toggle" />
-          </div>
-        </div>
-      </div>
-
-      {/* AI Coach */}
-      <div className="panel" style={{ marginBottom: 14 }}>
-        <div className="panel-header">
-          <div className="panel-title"><span className="panel-title-dot" /> AI Coach</div>
-        </div>
-        <div className="panel-body" style={{ padding: "0 16px" }}>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-name">Voice & tone</div>
-              <div className="settings-row-desc">How the assistant speaks to you</div>
-            </div>
-            <div className="seg">
-              <button className="seg-item on">COACH</button>
-              <button className="seg-item">DATA</button>
-              <button className="seg-item">HYBRID</button>
-            </div>
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-name">Voice callouts (TTS)</div>
-              <div className="settings-row-desc">Speak objective timers and warnings aloud</div>
-            </div>
-            <div className="toggle" />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-name">Confidence threshold</div>
-              <div className="settings-row-desc">Hide suggestions below this confidence</div>
-            </div>
-            <div className="t-mono" style={{ fontSize: 13, color: "var(--accent)" }}>72%</div>
+            <div
+              className={`toggle ${remoteSettings?.compact_mode ? 'on' : ''}`}
+              onClick={() => remoteSettings && handleRemoteToggle('compact_mode', !remoteSettings.compact_mode)}
+            />
           </div>
         </div>
       </div>
@@ -108,11 +102,14 @@ export function SettingsScreen() {
           <div className="settings-row">
             <div>
               <div className="settings-row-name">Show win probability</div>
-              <div className="settings-row-desc">Live AI estimate during the match</div>
+              <div className="settings-row-desc">Live estimate during the match</div>
             </div>
             <div
               className={`toggle ${settings.showWinPrediction ? "on" : ""}`}
-              onClick={() => saveSettings({ showWinPrediction: !settings.showWinPrediction })}
+              onClick={() => {
+                saveSettings({ showWinPrediction: !settings.showWinPrediction });
+                if (remoteSettings) handleRemoteToggle('show_win_prediction', !remoteSettings.show_win_prediction);
+              }}
             />
           </div>
           <div className="settings-row">
@@ -120,7 +117,10 @@ export function SettingsScreen() {
               <div className="settings-row-name">Show objective timers</div>
               <div className="settings-row-desc">Drake, Herald, Baron countdowns</div>
             </div>
-            <div className="toggle on" />
+            <div
+              className={`toggle ${remoteSettings?.show_objective_timers ? 'on' : 'on'}`}
+              onClick={() => remoteSettings && handleRemoteToggle('show_objective_timers', !remoteSettings.show_objective_timers)}
+            />
           </div>
           <div className="settings-row">
             <div>
@@ -134,7 +134,9 @@ export function SettingsScreen() {
               <div className="settings-row-name">Poll interval</div>
               <div className="settings-row-desc">How often to fetch game state (ms)</div>
             </div>
-            <div className="t-mono" style={{ fontSize: 13, color: "var(--fg-1)" }}>{settings.pollIntervalMs}ms</div>
+            <div className="t-mono" style={{ fontSize: 13, color: "var(--fg-1)" }}>
+              {remoteSettings?.poll_interval_ms ?? settings.pollIntervalMs}ms
+            </div>
           </div>
         </div>
       </div>
@@ -147,7 +149,7 @@ export function SettingsScreen() {
         <div className="panel-body">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
             <div><div className="t-eyebrow">VERSION</div><div className="t-mono" style={{ fontSize: 13, marginTop: 2 }}>2.0.0 · alpha</div></div>
-            <div><div className="t-eyebrow">MODEL</div><div className="t-mono" style={{ fontSize: 13, marginTop: 2 }}>YuumiNet v2.4</div></div>
+            <div><div className="t-eyebrow">BACKEND</div><div className="t-mono" style={{ fontSize: 13, marginTop: 2 }}>Rust · Axum · PostgreSQL</div></div>
             <div><div className="t-eyebrow">RUNTIME</div><div className="t-mono" style={{ fontSize: 13, marginTop: 2 }}>Tauri · Rust</div></div>
           </div>
         </div>
