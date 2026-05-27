@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Champ } from "../components/Champ";
 import { Donut } from "../components/Primitives";
 import { LIVE_OBJECTIVES, champById } from "../data/mockData";
+import { WipBanner, WipTag } from "../components/Wip";
 
 export function MacroScreen() {
   const [tick, setTick] = useState(0);
@@ -16,12 +17,13 @@ export function MacroScreen() {
 
   return (
     <div className="content fade-up">
+      <WipBanner label="Macro screen — requires League Client (LCU) integration. All data shown is a preview." />
       <div className="grid-2" style={{ marginBottom: 14 }}>
         {/* Live game win probability */}
         <div className="panel tactical">
           <div className="panel-header">
             <div className="panel-title"><span className="panel-title-dot" /> Live game · 18:24</div>
-            <span className="tag accent">CONNECTED</span>
+            <WipTag />
           </div>
           <div className="panel-body">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -49,8 +51,10 @@ export function MacroScreen() {
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><span className="panel-title-dot" style={{ background: "var(--amber)" }} /> Next play · AI suggests</div>
+            <WipTag />
           </div>
           <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <WipBanner label="AI play suggestions — not yet implemented" />
             <div style={{ display: "flex", gap: 12, padding: 14, background: "var(--accent-soft)", border: "1px solid var(--accent)", borderRadius: 8 }}>
               <div style={{ width: 48, height: 48, borderRadius: 8, background: "var(--accent)", display: "grid", placeItems: "center", fontFamily: "var(--ff-display)", fontSize: 22, fontWeight: 700, color: "#0a0613", flexShrink: 0 }}>
                 1
@@ -81,7 +85,7 @@ export function MacroScreen() {
       <div className="panel" style={{ marginBottom: 14 }}>
         <div className="panel-header">
           <div className="panel-title"><span className="panel-title-dot" style={{ background: "var(--amber)" }} /> Objective queue</div>
-          <span className="t-mono fg-3" style={{ fontSize: 10 }}>SORTED BY PRIORITY</span>
+          <WipTag />
         </div>
         <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {LIVE_OBJECTIVES.map(o => {
@@ -117,6 +121,7 @@ export function MacroScreen() {
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><span className="panel-title-dot" /> Lane states</div>
+            <WipTag />
           </div>
           <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[
@@ -139,6 +144,7 @@ export function MacroScreen() {
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><span className="panel-title-dot" /> Cooldown intel · enemy</div>
+            <WipTag />
           </div>
           <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
