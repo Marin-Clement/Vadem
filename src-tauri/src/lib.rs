@@ -11,13 +11,13 @@ use tracing_subscriber::EnvFilter;
 
 use commands::{
     inference::predict_win,
-    lcu::get_lcu_champ_select,
+    lcu::{debug_lcu, get_lcu_champ_select},
     lol_config::read_lol_config,
     settings::{get_settings, save_settings, set_overlay_clickthrough},
     spells::{get_spell_cooldowns, mark_spell_used, new_registry},
 };
 use models::events::GameStatePayload;
-use services::{league_poller, ml_service::MlService};
+use services::{lcu_ws, league_poller, ml_service::MlService};
 
 pub fn run() {
     tracing_subscriber::fmt()
@@ -71,6 +71,12 @@ pub fn run() {
                 league_poller::run(handle, state_ref).await;
             });
 
+            // ── Spawn LCU WebSocket subscriber ───────────────────────────────
+            let ws_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                lcu_ws::run(ws_handle).await;
+            });
+
             // ── 2. Activation de l'écoute du raccourci TAB ──────────────────
             hooks::keyboard::spawn(app.handle().clone());
 
@@ -85,6 +91,7 @@ pub fn run() {
             get_spell_cooldowns,
             read_lol_config,
             get_lcu_champ_select,
+            debug_lcu,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

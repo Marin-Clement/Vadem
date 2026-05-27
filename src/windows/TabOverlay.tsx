@@ -62,8 +62,8 @@ export default function TabOverlay() {
     <div style={{ position: "fixed", inset: 0, pointerEvents: "none" }}>
       <div style={{
         position: "absolute",
-        left: `${settings.tabOverlayLeft}%`,
-        top:  `${settings.tabOverlayTop}%`,
+        ...(settings.overlayPos.includes("right")  ? { right: "1%" }  : { left:   "1%" }),
+        ...(settings.overlayPos.includes("bottom") ? { bottom: "8%" } : { top:    "8%" }),
         width: 280,
         pointerEvents: "none",
       }}>

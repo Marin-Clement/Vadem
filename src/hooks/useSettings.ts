@@ -13,6 +13,8 @@ export interface AppSettings {
   hudScale:           number;
   /** LoL minimap scale (50–150). Used for the layout preview. */
   minimapScale:       number;
+  /** Overlay corner: "top-left" | "top-right" | "bottom-left" | "bottom-right" */
+  overlayPos:         string;
 }
 
 const defaults: AppSettings = {
@@ -24,6 +26,7 @@ const defaults: AppSettings = {
   timersOverlayTop:   1.5,
   hudScale:           100,
   minimapScale:       100,
+  overlayPos:         "top-right",
 };
 
 export function useSettings() {

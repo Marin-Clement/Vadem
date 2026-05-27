@@ -254,6 +254,37 @@ pub fn build_payload(data: &AllGameData, my_summoner: &str) -> GameStatePayload 
             && game_time - e.event_time < 180.0
     });
 
+    // ── Objective kill timestamps ────────────────────────────────────────────
+    let last_baron_kill_time = events
+        .iter()
+        .filter(|e| e.event_name == "BaronKill")
+        .map(|e| e.event_time)
+        .reduce(f64::max);
+
+    let last_dragon_kill_time = events
+        .iter()
+        .filter(|e| e.event_name == "DragonKill" && e.dragon_type != "Elder")
+        .map(|e| e.event_time)
+        .reduce(f64::max);
+
+    let last_elder_kill_time = events
+        .iter()
+        .filter(|e| e.event_name == "DragonKill" && e.dragon_type == "Elder")
+        .map(|e| e.event_time)
+        .reduce(f64::max);
+
+    let last_herald_kill_time = events
+        .iter()
+        .filter(|e| e.event_name == "HeraldKill")
+        .map(|e| e.event_time)
+        .reduce(f64::max);
+
+    let next_drake_type = data
+        .game_data
+        .as_ref()
+        .map(|g| g.map_terrain.clone())
+        .unwrap_or_default();
+
     // ── Grubs ────────────────────────────────────────────────────────────────
     let order_grubs = events
         .iter()
@@ -367,5 +398,10 @@ pub fn build_payload(data: &AllGameData, my_summoner: &str) -> GameStatePayload 
         mid_scaling_diff,
         adc_scaling_diff,
         sup_scaling_diff,
+        last_baron_kill_time,
+        last_dragon_kill_time,
+        last_elder_kill_time,
+        last_herald_kill_time,
+        next_drake_type,
     }
 }

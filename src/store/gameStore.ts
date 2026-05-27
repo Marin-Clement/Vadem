@@ -53,6 +53,12 @@ export interface GameState {
   midScalingDiff:    number;
   adcScalingDiff:    number;
   supScalingDiff:    number;
+
+  lastBaronKillTime:  number | null;
+  lastDragonKillTime: number | null;
+  lastElderKillTime:  number | null;
+  lastHeraldKillTime: number | null;
+  nextDrakeType:      string;
 }
 
 const defaultState: GameState = {
@@ -88,6 +94,11 @@ const defaultState: GameState = {
   midScalingDiff:    0,
   adcScalingDiff:    0,
   supScalingDiff:    0,
+  lastBaronKillTime:  null,
+  lastDragonKillTime: null,
+  lastElderKillTime:  null,
+  lastHeraldKillTime: null,
+  nextDrakeType:      "",
 };
 
 interface GameStore {

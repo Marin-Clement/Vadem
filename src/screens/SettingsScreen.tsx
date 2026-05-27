@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore";
 import { getSettings, updateSettings, type UserSettings } from "../api/settings";
 import { triggerGlobalCrawl } from "../api/player";
+import { useSettings } from "../hooks/useSettings";
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -40,13 +41,19 @@ export function SettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [crawling, setCrawling] = useState(false);
+  const { saveSettings: saveLocalSettings } = useSettings();
 
   useEffect(() => {
     // Apply persisted theme immediately (before API load)
     const saved = localStorage.getItem("vadem_theme");
     if (saved) document.documentElement.setAttribute("data-theme", saved);
 
-    getSettings().then(s => { setSettings(s); applySettings(s); }).catch(() => setError("Could not load settings"));
+    getSettings().then(s => {
+      setSettings(s);
+      applySettings(s);
+      // Sync overlay position to local Tauri store on load
+      if (s.overlay_pos) saveLocalSettings({ overlayPos: s.overlay_pos });
+    }).catch(() => setError("Could not load settings"));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const applySettings = (s: UserSettings) => {
@@ -169,7 +176,11 @@ export function SettingsScreen() {
                   { val: "bottom-left", label: "↙" },
                   { val: "bottom-right", label: "↘" },
                 ]}
-                onChange={v => update({ overlay_pos: v })}
+                onChange={v => {
+                  update({ overlay_pos: v });
+                  // Also write to local Tauri store so TabOverlay picks it up instantly
+                  saveLocalSettings({ overlayPos: v });
+                }}
               />
             ) : <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>…</div>}
           </div>

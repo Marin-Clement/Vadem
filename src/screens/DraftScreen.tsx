@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { Champ } from "../components/Champ";
 import { Icon } from "../components/Icon";
 import { useDDragon } from "../utils/ddragon";
@@ -8,9 +9,11 @@ import { getCounters, type MatchupEntry } from "../api/builds";
 
 interface LcuTeamSlot {
   championId: number;
+  championPickIntent: number;
   position: string;
   isMe: boolean;
   summonerId: number;
+  cellId: number;
 }
 
 interface LcuChampSelectState {
@@ -19,6 +22,7 @@ interface LcuChampSelectState {
   myTeamBans: number[];
   theirTeamBans: number[];
   phase: string;
+  localPlayerCellId: number;
 }
 
 const ROLES = ["TOP", "JNG", "MID", "BOT", "SUP"] as const;
@@ -27,10 +31,12 @@ type Role = typeof ROLES[number];
 interface Slot {
   role: Role;
   id: string | null;
+  isHover: boolean;
+  isMe: boolean;
 }
 
 function emptyRoster(): Slot[] {
-  return ROLES.map(role => ({ role, id: null }));
+  return ROLES.map(role => ({ role, id: null, isHover: false, isMe: false }));
 }
 
 function DraftSlot({
@@ -46,29 +52,47 @@ function DraftSlot({
   recRank?: number;
   onClick: () => void;
 }) {
+  const isEmpty = !slot.id;
+  const isHover = slot.isHover;
+
   return (
     <div
-      className={`draft-pick-slot ${!slot.id ? "empty" : ""} ${isActive ? "active" : ""}`}
+      className={`draft-pick-slot ${isEmpty ? "empty" : ""} ${isActive ? "active" : ""}`}
       onClick={onClick}
-      style={{ position: "relative" }}
+      style={{
+        position: "relative",
+        opacity: isHover ? 0.65 : 1,
+        borderLeft: slot.isMe ? "3px solid var(--accent)" : undefined,
+      }}
     >
       <span className="draft-pick-role">{slot.role}</span>
       {slot.id ? (
-        <Champ id={slot.id} size="lg" withTooltip />
+        <div style={{ position: "relative" }}>
+          <Champ id={slot.id} size="lg" withTooltip />
+          {isHover && (
+            <div style={{
+              position: "absolute", inset: 0, borderRadius: 6,
+              border: "2px dashed var(--fg-3)",
+              pointerEvents: "none",
+            }} />
+          )}
+        </div>
       ) : (
         <div className="champ lg no-bg" style={{ background: "var(--bg-2)", border: "1px dashed var(--line-3)", color: "var(--fg-3)" }}>
           <span style={{ fontSize: 10, fontWeight: 500 }}>?</span>
         </div>
       )}
       <div className="draft-pick-info">
-        <span className="draft-pick-name">
-          {slot.id ? slot.id : isEnemy ? "Enemy pick" : "Your pick"}
+        <span className="draft-pick-name" style={{ color: isHover ? "var(--fg-3)" : undefined }}>
+          {slot.id
+            ? (isHover ? `${slot.id}…` : slot.id)
+            : isEnemy ? "Enemy pick" : "Your pick"}
         </span>
         <span className="draft-pick-meta">
-          {slot.id ? slot.role : "Awaiting"}
+          {slot.id ? (isHover ? "Hovering" : slot.role) : "Awaiting"}
         </span>
       </div>
-      {recRank != null && (
+      {recRank != null && !isHover && (
         <div className="t-mono" style={{ fontSize: 11, fontWeight: 700, color: recRank === 0 ? "var(--accent)" : "var(--fg-3)" }}>
           #{recRank + 1}
         </div>
@@ -83,31 +107,64 @@ export function DraftScreen() {
   const [redRoster, setRedRoster] = useState<Slot[]>(emptyRoster());
   const [blueBans, setBlueBans] = useState<string[]>([]);
   const [redBans, setRedBans] = useState<string[]>([]);
-  const [activeSlot, setActiveSlot] = useState<{ team: "blue" | "red"; index: number }>({ team: "blue", index: 0 });
+  const [activeSlot, setActiveSlot] = useState<{ team: "blue" | "red"; index: number } | null>(null);
   const [analysis, setAnalysis] = useState<DraftAnalysisResponse | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [recommendations, setRecommendations] = useState<{ id: string; score: number; why: string }[]>([]);
   const [lcuStatus, setLcuStatus] = useState<"connecting" | "waiting" | "active" | "error">("connecting");
   const [lcuError, setLcuError] = useState<string | null>(null);
-  const lcuPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const applyLcuState = useCallback((state: LcuChampSelectState) => {
     if (!ddr) return;
+
     const keyToId = (key: number): string | null => {
       if (key <= 0) return null;
       return ddr.champByKey[String(key)] ?? null;
     };
 
-    const posOrder: Record<string, number> = { TOP: 0, JUNGLE: 1, MIDDLE: 2, BOTTOM: 3, UTILITY: 4, "": 0 };
-    const sortedMy = [...state.myTeam].sort((a, b) => (posOrder[a.position.toUpperCase()] ?? 0) - (posOrder[b.position.toUpperCase()] ?? 0));
-    const sortedTheir = [...state.theirTeam].sort((a, b) => (posOrder[a.position.toUpperCase()] ?? 0) - (posOrder[b.position.toUpperCase()] ?? 0));
+    // LCU position strings → our role labels
+    const POS_TO_ROLE: Record<string, Role> = {
+      TOP:     "TOP",
+      JUNGLE:  "JNG",
+      MIDDLE:  "MID",
+      BOTTOM:  "BOT",
+      UTILITY: "SUP",
+    };
 
-    setBlueRoster(ROLES.map((role, i) => ({ role, id: sortedMy[i] ? keyToId(sortedMy[i].championId) : null })));
-    setRedRoster(ROLES.map((role, i) => ({ role, id: sortedTheir[i] ? keyToId(sortedTheir[i].championId) : null })));
+    const toSlot = (m: LcuTeamSlot, role: Role): Slot => {
+      const locked = keyToId(m.championId);
+      const intent = keyToId(m.championPickIntent);
+      return { role, id: locked ?? intent, isHover: !locked && !!intent, isMe: m.isMe };
+    };
+
+    const buildRoster = (members: LcuTeamSlot[]): Slot[] => {
+      const placed = new Set<number>();
+      const byRole: Partial<Record<Role, LcuTeamSlot>> = {};
+      for (const m of members) {
+        const role = POS_TO_ROLE[m.position.toUpperCase()];
+        if (role) { byRole[role] = m; placed.add(m.cellId); }
+      }
+      const unplaced = [...members]
+        .filter(m => !placed.has(m.cellId))
+        .sort((a, b) => a.cellId - b.cellId);
+      let ui = 0;
+      return ROLES.map(role => {
+        if (byRole[role]) return toSlot(byRole[role]!, role);
+        if (ui < unplaced.length) return toSlot(unplaced[ui++], role);
+        return { role, id: null, isHover: false, isMe: false };
+      });
+    };
+
+    const newBlue = buildRoster(state.myTeam);
+    setBlueRoster(newBlue);
+    setRedRoster(buildRoster(state.theirTeam));
     setBlueBans(state.myTeamBans.map(keyToId).filter(Boolean) as string[]);
     setRedBans(state.theirTeamBans.map(keyToId).filter(Boolean) as string[]);
     setLcuStatus("active");
     setLcuError(null);
+    // Auto-focus local player's slot (only if user hasn't clicked a slot yet)
+    const myIdx = newBlue.findIndex(s => s.isMe);
+    if (myIdx >= 0) setActiveSlot(prev => prev ?? { team: "blue", index: myIdx });
   }, [ddr]);
 
   const syncLcu = useCallback(async () => {
@@ -116,12 +173,15 @@ export function DraftScreen() {
       applyLcuState(state);
     } catch (e) {
       const msg = String(e);
-      if (msg.includes("not running")) {
+      if (msg.includes("not running") || msg.includes("lockfile not found")) {
         setLcuStatus("error");
         setLcuError("League Client not running");
-      } else if (msg.includes("Not in")) {
+      } else if (msg.includes("Not in champion select")) {
         setLcuStatus("waiting");
         setLcuError(null);
+      } else if (msg.includes("parse error")) {
+        setLcuStatus("error");
+        setLcuError(`Parse error: ${msg}`);
       } else {
         setLcuStatus("waiting");
         setLcuError(null);
@@ -129,14 +189,27 @@ export function DraftScreen() {
     }
   }, [applyLcuState]);
 
-  // Auto-start polling on mount
   useEffect(() => {
     syncLcu();
-    lcuPollRef.current = setInterval(syncLcu, 3000);
-    return () => {
-      if (lcuPollRef.current) clearInterval(lcuPollRef.current);
-    };
   }, [syncLcu]);
+
+  // Real-time WebSocket events from the Rust LCU service
+  useEffect(() => {
+    const unlistenUpdate = listen<LcuChampSelectState>("lcu_champ_select_update", (e) => {
+      applyLcuState(e.payload);
+    });
+    const unlistenEnd = listen("lcu_champ_select_end", () => {
+      setLcuStatus("waiting");
+      setBlueRoster(emptyRoster());
+      setRedRoster(emptyRoster());
+      setBlueBans([]);
+      setRedBans([]);
+    });
+    return () => {
+      unlistenUpdate.then((f) => f());
+      unlistenEnd.then((f) => f());
+    };
+  }, [applyLcuState]);
 
   const handleAnalyze = useCallback(async () => {
     const blue = blueRoster.filter(p => p.id).map(p => p.id!);
@@ -162,6 +235,7 @@ export function DraftScreen() {
   }, [blueRoster, redRoster]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!activeSlot) { setRecommendations([]); return; }
     const enemySlot = (activeSlot.team === "blue" ? redRoster : blueRoster)[activeSlot.index];
     if (!enemySlot?.id) { setRecommendations([]); return; }
     getCounters(enemySlot.id)
@@ -181,7 +255,7 @@ export function DraftScreen() {
   const blueWr = analysis ? Math.round(analysis.blue_win_rate * 100) : 50;
   const redWr = analysis ? Math.round(analysis.red_win_rate * 100) : 50;
   const confidence = analysis ? analysis.confidence.toFixed(2) : "—";
-  const activeRoster = activeSlot.team === "blue" ? blueRoster : redRoster;
+  const activeRoster = activeSlot?.team === "blue" ? blueRoster : redRoster;
   const hasData = lcuStatus === "active";
 
   return (
@@ -214,8 +288,6 @@ export function DraftScreen() {
             </>
           )}
         </div>
-        <div style={{ flex: 1 }} />
-        <span className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)" }}>Auto-sync every 3s</span>
       </div>
 
       {/* Waiting overlay */}
@@ -247,7 +319,7 @@ export function DraftScreen() {
               <span className="tag cyan">{blueRoster.filter(s => s.id).length}/5</span>
             </div>
             {blueRoster.map((slot, i) => {
-              const isActive = activeSlot.team === "blue" && activeSlot.index === i;
+              const isActive = activeSlot?.team === "blue" && activeSlot.index === i;
               const recIdx = recommendations.findIndex(r => r.id === slot.id);
               return (
                 <DraftSlot
@@ -288,12 +360,12 @@ export function DraftScreen() {
 
             <div className="panel">
               <div className="panel-header">
-                <div className="panel-title"><span className="panel-title-dot" /> Suggested · {activeRoster[activeSlot.index]?.role}</div>
+                <div className="panel-title"><span className="panel-title-dot" /> Suggested · {activeSlot ? activeRoster[activeSlot.index]?.role : "—"}</div>
               </div>
               <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {recommendations.length === 0 ? (
                   <div className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)" }}>
-                    {redRoster[activeSlot.index]?.id
+                    {activeSlot && redRoster[activeSlot.index]?.id
                       ? "Loading counters…"
                       : "Select a slot — when enemy is picked, counters appear"}
                   </div>
@@ -328,7 +400,7 @@ export function DraftScreen() {
               <span className="tag loss">{redRoster.filter(s => s.id).length}/5</span>
             </div>
             {redRoster.map((slot, i) => {
-              const isActive = activeSlot.team === "red" && activeSlot.index === i;
+              const isActive = activeSlot?.team === "red" && activeSlot.index === i;
               return (
                 <DraftSlot
                   key={i}

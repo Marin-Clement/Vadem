@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { AppShell } from "../components/AppShell";
 import { LoginScreen } from "../screens/LoginScreen";
 import { useAuthStore } from "../store/authStore";
@@ -21,11 +22,36 @@ export default function Dashboard() {
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [buildsChampionId, setBuildsChampionId] = useState<string>("syndra");
   const [playerTarget, setPlayerTarget] = useState<{ puuid: string; gameName: string; tagLine: string } | null>(null);
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
 
   useEffect(() => {
     const saved = localStorage.getItem("vadem_theme");
     if (saved) document.documentElement.setAttribute("data-theme", saved);
   }, []);
+
+  // Poll LCU every 5 s — auto-navigate to Draft when champ select is detected
+  useEffect(() => {
+    if (!jwt) return;
+    const poll = async () => {
+      try {
+        await invoke("get_lcu_champ_select");
+        // If we reach here, client is in champ select
+        if (screenRef.current !== "draft") {
+          setPrevScreen(screenRef.current);
+          setScreen("draft");
+        }
+      } catch {
+        // Not in champ select — if we auto-navigated to draft, go back
+        if (screenRef.current === "draft") {
+          setScreen("dashboard");
+        }
+      }
+    };
+    const id = setInterval(poll, 5000);
+    poll(); // immediate first check
+    return () => clearInterval(id);
+  }, [jwt]);
 
   const handleNavigate = (s: Screen, extra?: { championId?: string }) => {
     if (s === "builds" && extra?.championId) {

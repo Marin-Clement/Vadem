@@ -39,6 +39,13 @@ pub struct GameStatePayload {
     pub mid_scaling_diff: f32,
     pub adc_scaling_diff: f32,
     pub sup_scaling_diff: f32,
+
+    // Real objective spawn tracking — game time (seconds) of the last kill, or None
+    pub last_baron_kill_time: Option<f64>,
+    pub last_dragon_kill_time: Option<f64>,
+    pub last_elder_kill_time: Option<f64>,
+    pub last_herald_kill_time: Option<f64>,
+    pub next_drake_type: String, // map_terrain from the live API (e.g. "Infernal")
 }
 
 #[derive(Debug, Clone, Serialize, Default, PartialEq)]

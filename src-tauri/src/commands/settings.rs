@@ -20,6 +20,8 @@ pub struct AppSettings {
     pub hud_scale: u32,
     /// LoL minimap scale (50–150, matches in-game minimap slider).
     pub minimap_scale: u32,
+    /// Overlay corner: "top-left" | "top-right" | "bottom-left" | "bottom-right"
+    pub overlay_pos: String,
 }
 
 impl Default for AppSettings {
@@ -34,6 +36,7 @@ impl Default for AppSettings {
             timers_overlay_top: 1.5,
             hud_scale: 100,
             minimap_scale: 100,
+            overlay_pos: "top-right".to_string(),
         }
     }
 }

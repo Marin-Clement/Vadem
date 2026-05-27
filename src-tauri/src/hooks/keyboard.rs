@@ -19,6 +19,8 @@ pub fn spawn(app: AppHandle) {
                     // Affiche la fenêtre d'overlay
                     if let Some(w) = app_handle.get_webview_window("tab-overlay") {
                         let _ = w.show();
+                        // Re-assert topmost every press — LoL can steal z-order
+                        let _ = w.set_always_on_top(true);
                     }
                     // Émet l'événement vers le frontend
                     let _ = app_handle.emit("tab_pressed", ());
