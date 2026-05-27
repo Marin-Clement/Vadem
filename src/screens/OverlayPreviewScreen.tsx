@@ -188,7 +188,7 @@ export function OverlayPreviewScreen() {
             color: "rgba(255,255,255,0.06)", fontFamily: "var(--ff-display)",
             fontSize: 80, fontWeight: 700, letterSpacing: "-0.04em",
           }}>
-            RIFTLINE
+            VADEM
           </div>
           {/* Simulated HUD bar */}
           <div style={{

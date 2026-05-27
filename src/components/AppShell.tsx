@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Icon } from "./Icon";
 import { useGameState } from "../hooks/useGameState";
@@ -50,7 +50,6 @@ export function AppShell({ children, screen, onNavigate }: AppShellProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const searchRef = useRef<HTMLDivElement>(null);
 
   const handle = profile?.game_name ?? '—';
   const tag    = profile?.tag_line ?? '—';
@@ -167,7 +166,7 @@ export function AppShell({ children, screen, onNavigate }: AppShellProps) {
               <span className="topbar-breadcrumb">{eyebrow}</span>
               <h1>{title}</h1>
             </div>
-            <div className="topbar-search" ref={searchRef} style={{ position: "relative" }}>
+            <div className="topbar-search" style={{ position: "relative" }}>
               <Icon name="search" size={14} />
               <input
                 value={searchQuery}
@@ -261,7 +260,7 @@ export function AppShell({ children, screen, onNavigate }: AppShellProps) {
             <span className="statusbar-item">CPU · 2.1%</span>
             <span className="statusbar-item">MEM · 184 MB</span>
             <div className="statusbar-spacer" />
-            <span className="statusbar-item">Patch 14.9</span>
+            <span className="statusbar-item">Patch 25.10</span>
             <span className="statusbar-item">YuumiNet v2.4</span>
             <span className="statusbar-item" style={{ color: "var(--accent)" }}>
               ● Tauri · Rust

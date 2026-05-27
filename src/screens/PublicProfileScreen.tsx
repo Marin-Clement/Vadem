@@ -23,23 +23,16 @@ interface Props {
 
 function MatchRow({
   m,
-  open,
-  onToggle,
   onViewPlayer,
 }: {
   m: PublicMatchItem;
-  open: boolean;
-  onToggle: () => void;
   onViewPlayer?: (puuid: string, gameName: string, tagLine: string) => void;
 }) {
   const playedAt = new Date(m.played_at).toISOString();
 
   return (
     <div>
-      <div
-        className={`match-row ${m.result ? "win" : "loss"} ${open ? "expanded" : ""}`}
-        onClick={onToggle}
-      >
+      <div className={`match-row ${m.result ? "win" : "loss"}`}>
         <div />
         <div className="match-result">
           <span className={`match-result-label ${m.result ? "win" : "loss"}`}>{m.result ? "WIN" : "LOSS"}</span>
@@ -52,7 +45,7 @@ function MatchRow({
             <span className="match-champ-info-meta">{m.role} · {m.queue_name} · {formatRelativeTime(playedAt)}</span>
           </div>
         </div>
-        <div className="match-team" style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <div className="match-team">
           <div style={{ display: "flex", gap: 2 }}>
             <Champ id={m.champion_id.toLowerCase()} size="xs" playerName="—" />
             {m.ally_champions.slice(0, 4).map((id, i) => {
@@ -90,7 +83,7 @@ function MatchRow({
           </div>
         </div>
         <KDARatio k={m.kills} d={m.deaths} a={m.assists} />
-        <Icon name={open ? "chevron-down" : "chevron-right"} size={14} />
+        <Icon name="chevron-right" size={14} />
       </div>
     </div>
   );
@@ -101,7 +94,6 @@ export function PublicProfileScreen({ puuid, gameName, tagLine, onBack, onViewPl
   const [data, setData] = useState<FullPublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
@@ -335,8 +327,6 @@ export function PublicProfileScreen({ puuid, gameName, tagLine, onBack, onViewPl
                   <MatchRow
                     key={m.match_id}
                     m={m}
-                    open={openId === m.match_id}
-                    onToggle={() => setOpenId(openId === m.match_id ? null : m.match_id)}
                     onViewPlayer={onViewPlayer}
                   />
                 ))

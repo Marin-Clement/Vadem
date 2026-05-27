@@ -29,6 +29,7 @@ export interface ParticipantSummary {
   puuid: string;
   champion_id: string;
   game_name: string;
+  role?: string;
   kills: number;
   deaths: number;
   assists: number;

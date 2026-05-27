@@ -95,7 +95,7 @@ export function SettingsScreen() {
                 {profile ? `${profile.game_name}#${profile.tag_line} · ${profile.region}` : '—'}
               </div>
             </div>
-            <button className="btn btn-sm" onClick={() => logout()}>DISCONNECT</button>
+            <button className="btn btn-sm" onClick={() => logout()}>Disconnect</button>
           </div>
         </div>
       </div>

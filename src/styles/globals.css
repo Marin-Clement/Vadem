@@ -395,6 +395,7 @@ html, body, #root {
    Tooltip
    ========================================================= */
 .tip-root { position: relative; display: inline-flex; }
+.tip-root:hover { z-index: 10; }
 .tip {
   position: absolute; bottom: calc(100% + 8px); left: 50%;
   transform: translateX(-50%) translateY(4px); background: var(--bg-3);
@@ -416,7 +417,7 @@ html, body, #root {
    Match row
    ========================================================= */
 .match-row {
-  display: grid; grid-template-columns: 4px 56px 1.4fr 2fr 1fr 80px 24px;
+  display: grid; grid-template-columns: 4px 56px 1.4fr 2fr 1fr 24px;
   align-items: center; gap: 14px; padding: 12px 14px; background: var(--bg-2);
   border: 1px solid var(--line-1); border-left-width: 0; border-radius: var(--r-2);
   cursor: pointer; transition: background 120ms, border-color 120ms; position: relative;
@@ -438,17 +439,14 @@ html, body, #root {
 .match-champ-info-text { display: flex; flex-direction: column; min-width: 0; }
 .match-champ-info-name { font-size: 13px; font-weight: 500; color: var(--fg-0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .match-champ-info-meta { font-family: var(--ff-mono); font-size: 10px; color: var(--fg-3); display: flex; gap: 6px; }
-.match-team { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; max-width: 220px; }
+.match-team { display: flex; flex-direction: column; gap: 3px; max-width: 220px; }
 .match-stats { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
 .match-kda { font-family: var(--ff-mono); font-weight: 600; font-size: 13px; color: var(--fg-0); }
 .match-kda-detail { font-family: var(--ff-mono); font-size: 10px; color: var(--fg-3); }
-.match-prediction { display: flex; align-items: center; gap: 8px; font-family: var(--ff-mono); font-size: 11px; color: var(--fg-2); }
-.match-prediction-bar { width: 60px; height: 4px; background: var(--bg-4); border-radius: 2px; overflow: hidden; position: relative; }
-.match-prediction-fill { position: absolute; inset: 0; background: var(--accent); border-radius: 2px; }
 
 .match-detail-panel {
   background: var(--bg-2); border: 1px solid var(--accent); border-radius: var(--r-3);
-  margin-top: -8px; margin-bottom: 8px; overflow: hidden; animation: fade-up 260ms ease both;
+  margin-top: -8px; margin-bottom: 8px; animation: fade-up 260ms ease both;
 }
 
 /* =========================================================
@@ -690,7 +688,7 @@ html, body, #root {
 }
 
 @keyframes spin-slow { to { transform: rotate(360deg); } }
-@keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
 .fade-up { animation: fade-up 260ms ease both; }
 
 /* =========================================================

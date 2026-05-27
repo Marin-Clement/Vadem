@@ -203,7 +203,7 @@ export function DraftScreen() {
           )}
           {lcuStatus === "connecting" && (
             <>
-              <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--yellow, #d97706)" }} />
+              <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--amber)" }} />
               <span className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>Connecting to League Client…</span>
             </>
           )}

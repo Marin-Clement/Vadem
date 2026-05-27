@@ -371,7 +371,7 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
                     </div>
                   </div>
                   {/* Team composition with names */}
-                  <div className="match-team" style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div className="match-team">
                     <div style={{ display: "flex", gap: 2 }}>
                       <Champ id={m.champion_id.toLowerCase()} size="xs" playerName="You" />
                       {m.ally_champions.slice(0, 4).map((id, i) => {

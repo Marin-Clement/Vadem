@@ -304,7 +304,7 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
                     <span className="match-champ-info-meta">{m.role} · {m.queue_name} · {formatRelativeTime(m.played_at)}</span>
                   </div>
                 </div>
-                <div className="match-team" style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                <div className="match-team">
                   <TeamMini champs={[m.champion_id, ...m.ally_champions]} />
                   <TeamMini champs={m.enemy_champions} />
                 </div>

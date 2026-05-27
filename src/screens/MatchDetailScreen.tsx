@@ -112,31 +112,47 @@ export function MatchDetailScreen({ matchId, onBack, onViewPlayer }: Props) {
   const kda = `${k}/${d}/${a}`;
   const kdaRatio = d === 0 ? "Perfect" : ((k + a) / d).toFixed(2);
 
-  // Build full 5-player rosters for display
-  // Ally side: user (index 0) + 4 allies from ally_participants
+  // Build full 5-player rosters, placing each participant at their actual role slot.
   type RosterEntry = { champId: string; participant?: ParticipantSummary; isMe: boolean };
-  const allyRoster: RosterEntry[] = [
-    { champId: match.champion_id, participant: undefined, isMe: true },
-    ...match.ally_champions.map((champId, i): RosterEntry => ({
-      champId,
-      participant: match.ally_participants?.[i],
+
+  const roleIndex = (r?: string) => {
+    const i = ROLES.indexOf(r ?? "");
+    return i === -1 ? 99 : i;
+  };
+
+  const userRoleIdx = roleIndex(match.role);
+  const safeUserIdx = userRoleIdx === 99 ? 0 : userRoleIdx;
+
+  const sortedAllies = [...(match.ally_participants ?? [])]
+    .sort((a, b) => roleIndex(a.role) - roleIndex(b.role));
+
+  const allyRoster: RosterEntry[] = [];
+  let allyIdx = 0;
+  for (let i = 0; i < 5; i++) {
+    if (i === safeUserIdx) {
+      allyRoster.push({ champId: match.champion_id, participant: undefined, isMe: true });
+    } else {
+      const p = sortedAllies[allyIdx];
+      allyRoster.push({
+        champId: p?.champion_id ?? match.ally_champions[allyIdx] ?? "?",
+        participant: p,
+        isMe: false,
+      });
+      allyIdx++;
+    }
+  }
+
+  const sortedEnemies = [...(match.enemy_participants ?? [])]
+    .sort((a, b) => roleIndex(a.role) - roleIndex(b.role));
+
+  const enemyRoster: RosterEntry[] = ROLES.map((_, i): RosterEntry => {
+    const p = sortedEnemies[i];
+    return {
+      champId: p?.champion_id ?? match.enemy_champions[i] ?? "?",
+      participant: p,
       isMe: false,
-    })),
-  ].slice(0, 5);
-
-  while (allyRoster.length < 5) {
-    allyRoster.push({ champId: "?", participant: undefined, isMe: false });
-  }
-
-  const enemyRoster: RosterEntry[] = match.enemy_champions.map((champId, i): RosterEntry => ({
-    champId,
-    participant: match.enemy_participants?.[i],
-    isMe: false,
-  })).slice(0, 5);
-
-  while (enemyRoster.length < 5) {
-    enemyRoster.push({ champId: "?", participant: undefined, isMe: false });
-  }
+    };
+  });
 
   return (
     <div className="content fade-up">
