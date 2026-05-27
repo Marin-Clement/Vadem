@@ -6,7 +6,7 @@ import { useAuthStore } from "../store/authStore";
 import { useDDragon } from "../utils/ddragon";
 import logoUrl from "../assets/logo.svg";
 
-type Screen = "dashboard" | "profile" | "matchDetail" | "draft" | "builds" | "macro" | "overlay" | "settings";
+type Screen = "dashboard" | "profile" | "matchDetail" | "draft" | "builds" | "macro" | "overlay" | "settings" | "playerProfile";
 
 const NAV = [
   { id: "dashboard" as Screen, icon: "home",     label: "Dashboard" },
@@ -25,8 +25,9 @@ const SCREEN_LABEL: Record<string, [string, string]> = {
   matchDetail:["MATCH", "Detailed analysis"],
   builds:     ["BUILDS", "Items & runes"],
   macro:      ["MACRO", "Objectives & live game"],
-  overlay:    ["OVERLAY", "In-game widget preview"],
-  settings:   ["CONFIG", "Settings"],
+  overlay:       ["OVERLAY", "In-game widget preview"],
+  settings:      ["CONFIG", "Settings"],
+  playerProfile: ["PLAYER", "Public profile"],
 };
 
 interface SearchResult {

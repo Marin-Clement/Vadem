@@ -18,7 +18,9 @@ export interface MatchListItem {
   vision_score: number | null;
   items: number[];
   ally_champions: string[];
+  ally_names: string[];
   enemy_champions: string[];
+  enemy_names: string[];
 }
 
 export interface ParticipantSummary {

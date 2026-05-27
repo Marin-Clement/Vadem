@@ -22,6 +22,7 @@ interface Props {
   onSelectMatch: (id: string) => void;
   onOpenMatchDetail: (id: string) => void;
   onNavigate?: (s: Screen, extra?: { championId?: string }) => void;
+  onViewPlayer?: (gameName: string, tagLine: string) => void;
 }
 
 function MatchDetailPanel({ matchId, onOpenFull }: { matchId: string; onOpenFull: () => void }) {
@@ -119,7 +120,7 @@ function MatchDetailPanel({ matchId, onOpenFull }: { matchId: string; onOpenFull
   );
 }
 
-export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetail, onNavigate }: Props) {
+export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetail, onNavigate, onViewPlayer }: Props) {
   const storeProfile = useAuthStore(s => s.profile);
   const setStoreProfile = useAuthStore(s => s.setProfile);
   const ddr = useDDragon();
@@ -369,18 +370,40 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
                       <span className="match-champ-info-meta">{m.role} · {m.queue_name} · {formatRelativeTime(m.played_at)}</span>
                     </div>
                   </div>
-                  {/* Team composition mini */}
+                  {/* Team composition with names */}
                   <div className="match-team" style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                     <div style={{ display: "flex", gap: 2 }}>
-                      <Champ id={m.champion_id.toLowerCase()} size="xs" />
-                      {m.ally_champions.slice(0, 4).map((id, i) => (
-                        <Champ key={i} id={id.toLowerCase()} size="xs" withTooltip />
-                      ))}
+                      <Champ id={m.champion_id.toLowerCase()} size="xs" playerName="You" />
+                      {m.ally_champions.slice(0, 4).map((id, i) => {
+                        const raw = m.ally_names?.[i] ?? "";
+                        const [gn, tl] = raw.includes("#") ? raw.split("#") : [raw, ""];
+                        return (
+                          <Champ
+                            key={i}
+                            id={id.toLowerCase()}
+                            size="xs"
+                            playerName={gn || undefined}
+                            withTooltip
+                            onClick={gn && onViewPlayer ? () => onViewPlayer(gn, tl) : undefined}
+                          />
+                        );
+                      })}
                     </div>
                     <div style={{ display: "flex", gap: 2 }}>
-                      {m.enemy_champions.slice(0, 5).map((id, i) => (
-                        <Champ key={i} id={id.toLowerCase()} size="xs" withTooltip />
-                      ))}
+                      {m.enemy_champions.slice(0, 5).map((id, i) => {
+                        const raw = m.enemy_names?.[i] ?? "";
+                        const [gn, tl] = raw.includes("#") ? raw.split("#") : [raw, ""];
+                        return (
+                          <Champ
+                            key={i}
+                            id={id.toLowerCase()}
+                            size="xs"
+                            playerName={gn || undefined}
+                            withTooltip
+                            onClick={gn && onViewPlayer ? () => onViewPlayer(gn, tl) : undefined}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                   <KDARatio k={m.kills ?? 0} d={m.deaths ?? 0} a={m.assists ?? 0} />

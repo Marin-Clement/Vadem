@@ -73,3 +73,8 @@ export function syncMatches(): Promise<{ synced: number }> {
 export function triggerGlobalCrawl(): Promise<{ status: string }> {
   return apiFetch('/players/me/crawl-global', { method: 'POST' });
 }
+
+export function lookupPlayer(gameName: string, tagLine: string): Promise<PlayerProfile> {
+  const qs = new URLSearchParams({ game_name: gameName, tag_line: tagLine });
+  return apiFetch(`/players/lookup?${qs}`);
+}

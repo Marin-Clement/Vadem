@@ -10,16 +10,18 @@ import { MacroScreen } from "../screens/MacroScreen";
 import { OverlayPreviewScreen } from "../screens/OverlayPreviewScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { MatchDetailScreen } from "../screens/MatchDetailScreen";
+import { PublicProfileScreen } from "../screens/PublicProfileScreen";
 
-type Screen = "dashboard" | "profile" | "matchDetail" | "draft" | "builds" | "macro" | "overlay" | "settings";
+type Screen = "dashboard" | "profile" | "matchDetail" | "draft" | "builds" | "macro" | "overlay" | "settings" | "playerProfile";
 
 export default function Dashboard() {
   const jwt = useAuthStore(s => s.jwt);
   const [screen, setScreen] = useState<Screen>("dashboard");
+  const [prevScreen, setPrevScreen] = useState<Screen>("dashboard");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [buildsChampionId, setBuildsChampionId] = useState<string>("syndra");
+  const [playerTarget, setPlayerTarget] = useState<{ gameName: string; tagLine: string } | null>(null);
 
-  // Apply persisted theme on startup
   useEffect(() => {
     const saved = localStorage.getItem("vadem_theme");
     if (saved) document.documentElement.setAttribute("data-theme", saved);
@@ -29,7 +31,14 @@ export default function Dashboard() {
     if (s === "builds" && extra?.championId) {
       setBuildsChampionId(extra.championId);
     }
+    setPrevScreen(screen);
     setScreen(s);
+  };
+
+  const navigateToPlayer = (gameName: string, tagLine: string) => {
+    setPlayerTarget({ gameName, tagLine });
+    setPrevScreen(screen);
+    setScreen("playerProfile");
   };
 
   const renderScreen = () => {
@@ -48,21 +57,25 @@ export default function Dashboard() {
             onSelectMatch={setSelectedMatchId}
             onOpenMatchDetail={(id) => { setSelectedMatchId(id); setScreen("matchDetail"); }}
             onNavigate={handleNavigate}
+            onViewPlayer={navigateToPlayer}
           />
         );
       case "matchDetail":
         return (
           <MatchDetailScreen
-            matchId={selectedMatchId || "m-2034"}
+            matchId={selectedMatchId || ""}
             onBack={() => setScreen("profile")}
-            onSearchPlayer={(name) => {
-              // Navigate to profile search — for now go to profile screen
-              // Future: could open a searched summoner profile
-              console.log("Search player:", name);
-              setScreen("profile");
-            }}
+            onViewPlayer={navigateToPlayer}
           />
         );
+      case "playerProfile":
+        return playerTarget ? (
+          <PublicProfileScreen
+            gameName={playerTarget.gameName}
+            tagLine={playerTarget.tagLine}
+            onBack={() => setScreen(prevScreen)}
+          />
+        ) : null;
       case "draft":    return <DraftScreen />;
       case "builds":   return <BuildsScreen championId={buildsChampionId} onChangeChampion={setBuildsChampionId} />;
       case "macro":    return <MacroScreen />;

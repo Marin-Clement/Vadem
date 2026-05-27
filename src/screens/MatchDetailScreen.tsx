@@ -11,7 +11,7 @@ const ROLES = ["TOP", "JNG", "MID", "BOT", "SUP"];
 interface Props {
   matchId: string;
   onBack: () => void;
-  onSearchPlayer?: (gameName: string) => void;
+  onViewPlayer?: (gameName: string, tagLine: string) => void;
 }
 
 interface PlayerRowProps {
@@ -19,14 +19,22 @@ interface PlayerRowProps {
   participant?: ParticipantSummary;
   champId: string;
   isMe: boolean;
-  onSearchPlayer?: (gameName: string) => void;
+  onViewPlayer?: (gameName: string, tagLine: string) => void;
 }
 
-function PlayerRow({ role, participant, champId, isMe, onSearchPlayer }: PlayerRowProps) {
+function PlayerRow({ role, participant, champId, isMe, onViewPlayer }: PlayerRowProps) {
   const kda = participant
     ? `${participant.kills}/${participant.deaths}/${participant.assists}`
     : "—";
   const name = isMe ? "You" : (participant?.game_name ?? champId);
+  const canClick = !isMe && !!participant?.game_name && !!onViewPlayer;
+
+  const handleClick = () => {
+    if (!canClick || !participant?.game_name) return;
+    const raw = participant.game_name;
+    const [gn, tl = ""] = raw.includes("#") ? raw.split("#") : [raw, ""];
+    onViewPlayer!(gn, tl);
+  };
 
   return (
     <div
@@ -39,10 +47,10 @@ function PlayerRow({ role, participant, champId, isMe, onSearchPlayer }: PlayerR
         background: isMe ? "var(--accent-soft)" : "var(--bg-3)",
         border: `1px solid ${isMe ? "var(--accent)" : "var(--line-1)"}`,
         borderRadius: 6,
-        cursor: !isMe && participant?.game_name ? "pointer" : "default",
+        cursor: canClick ? "pointer" : "default",
       }}
-      onClick={() => !isMe && participant?.game_name && onSearchPlayer?.(participant.game_name)}
-      title={!isMe && participant?.game_name ? `Search ${participant.game_name}` : undefined}
+      onClick={handleClick}
+      title={canClick ? `View ${name}'s profile` : undefined}
     >
       <span className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)", fontWeight: 700, letterSpacing: "0.08em" }}>
         {role}
@@ -63,7 +71,7 @@ function PlayerRow({ role, participant, champId, isMe, onSearchPlayer }: PlayerR
   );
 }
 
-export function MatchDetailScreen({ matchId, onBack, onSearchPlayer }: Props) {
+export function MatchDetailScreen({ matchId, onBack, onViewPlayer }: Props) {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -222,7 +230,7 @@ export function MatchDetailScreen({ matchId, onBack, onSearchPlayer }: Props) {
                   participant={player.participant}
                   champId={player.champId}
                   isMe={player.isMe}
-                  onSearchPlayer={onSearchPlayer}
+                  onViewPlayer={onViewPlayer}
                 />
               ))}
             </div>

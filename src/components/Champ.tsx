@@ -8,9 +8,10 @@ interface ChampProps {
   showName?: boolean;
   withTooltip?: boolean;
   playerName?: string;
+  onClick?: () => void;
 }
 
-export function Champ({ id, size = "", className = "", showName = false, withTooltip = false, playerName }: ChampProps) {
+export function Champ({ id, size = "", className = "", showName = false, withTooltip = false, playerName, onClick }: ChampProps) {
   const ddr = useDDragon();
   const c = champById(id);
 
@@ -43,7 +44,11 @@ export function Champ({ id, size = "", className = "", showName = false, withToo
 
   if (withTooltip) {
     return (
-      <div className="tip-root">
+      <div
+        className="tip-root"
+        onClick={onClick}
+        style={onClick ? { cursor: "pointer" } : undefined}
+      >
         {inner}
         <div className="tip">
           {playerName ? (
