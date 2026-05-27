@@ -3,10 +3,13 @@ import { Champ } from "../components/Champ";
 import { DDragonItem } from "../components/Champ";
 import { getBuilds, getSkillOrder, getCounters, type BuildEntry, type MatchupEntry } from "../api/builds";
 import { WipTag } from "../components/Wip";
+import { useDDragon } from "../utils/ddragon";
+import { Icon } from "../components/Icon";
 
 interface Props {
   championId?: string;
   vsChampion?: string;
+  onChangeChampion?: (id: string) => void;
 }
 
 const SKILL_LEVELS: Record<string, number[]> = {
@@ -16,12 +19,34 @@ const SKILL_LEVELS: Record<string, number[]> = {
   R: [6, 11, 16],
 };
 
-export function BuildsScreen({ championId = "syndra", vsChampion }: Props) {
+export function BuildsScreen({ championId = "syndra", vsChampion, onChangeChampion }: Props) {
+  const ddr = useDDragon();
+  const [champSearch, setChampSearch] = useState(championId);
+  const [champSearchFocused, setChampSearchFocused] = useState(false);
+  const [champSuggestions, setChampSuggestions] = useState<string[]>([]);
   const [builds, setBuilds] = useState<BuildEntry[]>([]);
   const [skillOrder, setSkillOrder] = useState<string[]>(["Q", "E", "W", "R"]);
   const [strongVs, setStrongVs] = useState<MatchupEntry[]>([]);
   const [weakVs, setWeakVs] = useState<MatchupEntry[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => { setChampSearch(championId); }, [championId]);
+
+  useEffect(() => {
+    if (!champSearch.trim() || !ddr) { setChampSuggestions([]); return; }
+    const q = champSearch.toLowerCase();
+    const ids = Object.values(ddr.champByName)
+      .filter((v, i, arr) => arr.indexOf(v) === i && v.toLowerCase().includes(q))
+      .slice(0, 6);
+    setChampSuggestions(ids);
+  }, [champSearch, ddr]);
+
+  const selectChamp = (id: string) => {
+    setChampSearch(id);
+    setChampSuggestions([]);
+    setChampSearchFocused(false);
+    onChangeChampion?.(id);
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -57,8 +82,44 @@ export function BuildsScreen({ championId = "syndra", vsChampion }: Props) {
           <Champ id={championId.toLowerCase()} size="xl" />
           <div>
             <div className="t-eyebrow">BUILD RECOMMENDER</div>
-            <div className="t-display" style={{ fontSize: 24, fontWeight: 600 }}>{championId} · MID</div>
-            <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>
+            <div style={{ position: "relative" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--bg-3)", border: "1px solid var(--line-1)", borderRadius: 8, padding: "6px 10px" }}>
+                <Icon name="search" size={14} />
+                <input
+                  value={champSearch}
+                  onChange={e => setChampSearch(e.target.value)}
+                  onFocus={() => setChampSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setChampSearchFocused(false), 150)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && champSuggestions.length > 0) selectChamp(champSuggestions[0]);
+                    if (e.key === "Escape") setChampSearchFocused(false);
+                  }}
+                  placeholder="Search champion…"
+                  style={{ background: "none", border: "none", outline: "none", fontSize: 16, fontWeight: 600, fontFamily: "var(--ff-display)", color: "var(--fg-0)", width: 180 }}
+                />
+              </div>
+              {champSearchFocused && champSuggestions.length > 0 && (
+                <div style={{
+                  position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 100,
+                  background: "var(--bg-2)", border: "1px solid var(--line-1)", borderRadius: 8,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.4)", overflow: "hidden", minWidth: 200,
+                }}>
+                  {champSuggestions.map(id => (
+                    <div
+                      key={id}
+                      style={{ padding: "8px 12px", cursor: "pointer", display: "flex", gap: 8, alignItems: "center", borderBottom: "1px solid var(--line-1)" }}
+                      onMouseDown={() => selectChamp(id)}
+                      onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-3)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "")}
+                    >
+                      <Champ id={id.toLowerCase()} size="sm" />
+                      <span style={{ fontSize: 13, fontWeight: 500 }}>{id}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 4 }}>
               {vsChampion ? `vs ${vsChampion} · ` : ''}
               {loading ? 'Loading…' : `${builds.reduce((s, b) => s + b.games, 0).toLocaleString()} games sampled`}
             </div>

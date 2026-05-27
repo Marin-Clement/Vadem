@@ -17,13 +17,21 @@ export default function Dashboard() {
   const jwt = useAuthStore(s => s.jwt);
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [buildsChampionId, setBuildsChampionId] = useState<string>("syndra");
+
+  const handleNavigate = (s: Screen, extra?: { championId?: string }) => {
+    if (s === "builds" && extra?.championId) {
+      setBuildsChampionId(extra.championId);
+    }
+    setScreen(s);
+  };
 
   const renderScreen = () => {
     switch (screen) {
       case "dashboard":
         return (
           <DashboardScreen
-            onNavigate={setScreen}
+            onNavigate={handleNavigate}
             onSelectMatch={(id) => setSelectedMatchId(id)}
           />
         );
@@ -40,10 +48,16 @@ export default function Dashboard() {
           <MatchDetailScreen
             matchId={selectedMatchId || "m-2034"}
             onBack={() => setScreen("profile")}
+            onSearchPlayer={(name) => {
+              // Navigate to profile search — for now go to profile screen
+              // Future: could open a searched summoner profile
+              console.log("Search player:", name);
+              setScreen("profile");
+            }}
           />
         );
       case "draft":    return <DraftScreen />;
-      case "builds":   return <BuildsScreen />;
+      case "builds":   return <BuildsScreen championId={buildsChampionId} onChangeChampion={setBuildsChampionId} />;
       case "macro":    return <MacroScreen />;
       case "overlay":  return <OverlayPreviewScreen />;
       case "settings": return <SettingsScreen />;
@@ -54,7 +68,7 @@ export default function Dashboard() {
   if (!jwt) return <LoginScreen />;
 
   return (
-    <AppShell screen={screen} onNavigate={setScreen}>
+    <AppShell screen={screen} onNavigate={handleNavigate}>
       {renderScreen()}
     </AppShell>
   );

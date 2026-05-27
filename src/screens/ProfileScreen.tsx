@@ -6,6 +6,7 @@ import { StatTile, Sparkline, KDARatio } from "../components/Primitives";
 import { listMatches, getMatch, formatDuration, formatRelativeTime, type MatchListItem, type MatchDetail } from "../api/matches";
 import { getProfile, syncMatches, type PlayerProfile } from "../api/player";
 import { useAuthStore } from "../store/authStore";
+import { useDDragon } from "../utils/ddragon";
 
 interface Props {
   selectedMatchId: string | null;
@@ -93,6 +94,7 @@ function MatchDetailPanel({ matchId, onOpenFull }: { matchId: string; onOpenFull
 export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetail }: Props) {
   const storeProfile = useAuthStore(s => s.profile);
   const setStoreProfile = useAuthStore(s => s.setProfile);
+  const ddr = useDDragon();
   const [filter, setFilter] = useState("all");
   const [openId, setOpenId] = useState<string | null>(selectedMatchId);
   const [matches, setMatches] = useState<MatchListItem[]>([]);
@@ -101,10 +103,34 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      getProfile().then(p => { setProfile(p); setStoreProfile(p); }),
-      listMatches({ limit: 20 }).then(setMatches),
-    ]).finally(() => setLoading(false));
+    let cancelled = false;
+    const loadData = async () => {
+      try {
+        const [p, m] = await Promise.all([
+          getProfile(),
+          listMatches({ limit: 20 }),
+        ]);
+        if (cancelled) return;
+        setProfile(p);
+        setStoreProfile(p);
+        if (m.length === 0) {
+          // Auto-sync if no matches found yet
+          setSyncing(true);
+          try {
+            await syncMatches();
+            const fresh = await listMatches({ limit: 20 });
+            if (!cancelled) setMatches(fresh);
+          } catch { /* ignore sync errors */ }
+          finally { if (!cancelled) setSyncing(false); }
+        } else {
+          setMatches(m);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadData();
+    return () => { cancelled = true; };
   }, [setStoreProfile]);
 
   const handleSync = async () => {
@@ -125,6 +151,26 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
   const losses = matches.length - wins;
   const rank = profile?.rank;
 
+  const profileIconUrl = profile?.profile_icon_id && ddr
+    ? `https://ddragon.leagueoflegends.com/cdn/${ddr.version}/img/profileicon/${profile.profile_icon_id}.png`
+    : null;
+
+  const avgKDA = (() => {
+    const valid = matches.filter(m => m.kills != null && m.deaths != null && m.assists != null);
+    if (!valid.length) return "—";
+    const sum = valid.reduce((s, m) => {
+      const d = m.deaths === 0 ? 1 : (m.deaths ?? 1);
+      return s + ((m.kills ?? 0) + (m.assists ?? 0)) / d;
+    }, 0);
+    return (sum / valid.length).toFixed(2);
+  })();
+
+  const avgCSMin = (() => {
+    const valid = matches.filter(m => m.cs_per_min != null);
+    if (!valid.length) return "—";
+    return (valid.reduce((s, m) => s + (m.cs_per_min ?? 0), 0) / valid.length).toFixed(1);
+  })();
+
   return (
     <div className="content fade-up">
       {/* Profile hero */}
@@ -132,8 +178,21 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
         <div className="tactical-grid-bg" style={{ position: "absolute", inset: 0, opacity: 0.3, maskImage: "radial-gradient(circle at 80% 50%, transparent, black 70%)" }} />
         <div className="panel-body" style={{ display: "flex", gap: 24, alignItems: "center", position: "relative" }}>
           <div style={{ position: "relative" }}>
-            <div style={{ width: 96, height: 96, borderRadius: 16, background: "var(--accent)", display: "grid", placeItems: "center", fontFamily: "var(--ff-display)", fontSize: 36, fontWeight: 700, color: "#0a0613" }}>
-              {(profile?.game_name ?? 'XX').slice(0, 2).toUpperCase()}
+            <div style={{ width: 96, height: 96, borderRadius: 16, background: "var(--accent)", overflow: "hidden", display: "grid", placeItems: "center", fontFamily: "var(--ff-display)", fontSize: 36, fontWeight: 700, color: "#0a0613" }}>
+              {profileIconUrl ? (
+                <img
+                  src={profileIconUrl}
+                  alt="Profile icon"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  onError={e => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                    (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.removeProperty("display");
+                  }}
+                />
+              ) : null}
+              <span style={{ display: profileIconUrl ? "none" : undefined }}>
+                {(profile?.game_name ?? 'XX').slice(0, 2).toUpperCase()}
+              </span>
             </div>
             <div style={{ position: "absolute", bottom: -4, right: -4, padding: "2px 8px", background: "var(--bg-3)", border: "1px solid var(--accent)", borderRadius: 6, fontFamily: "var(--ff-mono)", fontSize: 10, fontWeight: 700, color: "var(--accent)" }}>
               {profile?.summoner_level ?? '—'}
@@ -169,8 +228,8 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
       <div className="grid-4" style={{ marginBottom: 14 }}>
         <StatTile label="Season W/L" value={`${wins}–${losses}`} />
         <StatTile label="Win rate" value={matches.length > 0 ? Math.round(wins / matches.length * 100) : 0} suffix="%" />
-        <StatTile label="Avg KDA" value="—" />
-        <StatTile label="LP gain · 7d" value={rank ? `${rank.lp}` : '—'} />
+        <StatTile label="Avg KDA" value={avgKDA} />
+        <StatTile label="CS / min" value={avgCSMin} />
       </div>
 
       {/* Match history */}
@@ -213,7 +272,7 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
                     </div>
                   </div>
                   <div className="match-team" />
-                  <KDARatio k={m.kills} d={m.deaths} a={m.assists} />
+                  <KDARatio k={m.kills ?? 0} d={m.deaths ?? 0} a={m.assists ?? 0} />
                   <div className="match-prediction">
                     <div className="match-prediction-bar">
                       <div className="match-prediction-fill" style={{ width: `${m.result ? 60 : 40}%` }} />

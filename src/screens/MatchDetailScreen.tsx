@@ -3,7 +3,7 @@ import { Icon } from "../components/Icon";
 import { Champ } from "../components/Champ";
 import { DDragonItem } from "../components/Champ";
 import { Sparkline } from "../components/Primitives";
-import { getMatch, formatDuration, formatRelativeTime, type MatchDetail } from "../api/matches";
+import { getMatch, formatDuration, formatRelativeTime, type MatchDetail, type ParticipantSummary } from "../api/matches";
 import { WipBanner, WipTag } from "../components/Wip";
 
 const ROLES = ["TOP", "JNG", "MID", "BOT", "SUP"];
@@ -11,9 +11,59 @@ const ROLES = ["TOP", "JNG", "MID", "BOT", "SUP"];
 interface Props {
   matchId: string;
   onBack: () => void;
+  onSearchPlayer?: (gameName: string) => void;
 }
 
-export function MatchDetailScreen({ matchId, onBack }: Props) {
+interface PlayerRowProps {
+  role: string;
+  participant?: ParticipantSummary;
+  champId: string;
+  isMe: boolean;
+  onSearchPlayer?: (gameName: string) => void;
+}
+
+function PlayerRow({ role, participant, champId, isMe, onSearchPlayer }: PlayerRowProps) {
+  const kda = participant
+    ? `${participant.kills}/${participant.deaths}/${participant.assists}`
+    : "—";
+  const name = isMe ? "You" : (participant?.game_name ?? champId);
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "32px 36px 1fr 80px",
+        gap: 10,
+        alignItems: "center",
+        padding: 8,
+        background: isMe ? "var(--accent-soft)" : "var(--bg-3)",
+        border: `1px solid ${isMe ? "var(--accent)" : "var(--line-1)"}`,
+        borderRadius: 6,
+        cursor: !isMe && participant?.game_name ? "pointer" : "default",
+      }}
+      onClick={() => !isMe && participant?.game_name && onSearchPlayer?.(participant.game_name)}
+      title={!isMe && participant?.game_name ? `Search ${participant.game_name}` : undefined}
+    >
+      <span className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)", fontWeight: 700, letterSpacing: "0.08em" }}>
+        {role}
+      </span>
+      <Champ id={champId.toLowerCase()} withTooltip />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {name}
+        </div>
+        {!isMe && participant?.cs != null && (
+          <div className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)" }}>
+            {participant.cs} CS
+          </div>
+        )}
+      </div>
+      <span className="t-mono fg-2" style={{ fontSize: 11 }}>{kda}</span>
+    </div>
+  );
+}
+
+export function MatchDetailScreen({ matchId, onBack, onSearchPlayer }: Props) {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +103,32 @@ export function MatchDetailScreen({ matchId, onBack }: Props) {
   const k = match.kills ?? 0, d = match.deaths ?? 0, a = match.assists ?? 0;
   const kda = `${k}/${d}/${a}`;
   const kdaRatio = d === 0 ? "Perfect" : ((k + a) / d).toFixed(2);
+
+  // Build full 5-player rosters for display
+  // Ally side: user (index 0) + 4 allies from ally_participants
+  type RosterEntry = { champId: string; participant?: ParticipantSummary; isMe: boolean };
+  const allyRoster: RosterEntry[] = [
+    { champId: match.champion_id, participant: undefined, isMe: true },
+    ...match.ally_champions.map((champId, i): RosterEntry => ({
+      champId,
+      participant: match.ally_participants?.[i],
+      isMe: false,
+    })),
+  ].slice(0, 5);
+
+  while (allyRoster.length < 5) {
+    allyRoster.push({ champId: "?", participant: undefined, isMe: false });
+  }
+
+  const enemyRoster: RosterEntry[] = match.enemy_champions.map((champId, i): RosterEntry => ({
+    champId,
+    participant: match.enemy_participants?.[i],
+    isMe: false,
+  })).slice(0, 5);
+
+  while (enemyRoster.length < 5) {
+    enemyRoster.push({ champId: "?", participant: undefined, isMe: false });
+  }
 
   return (
     <div className="content fade-up">
@@ -124,11 +200,11 @@ export function MatchDetailScreen({ matchId, onBack }: Props) {
         </div>
       </div>
 
-      {/* Teams */}
+      {/* Teams — full 5v5 with summoner names */}
       <div className="grid-2" style={{ marginBottom: 14 }}>
         {[
-          { label: "Your team", side: "blue", roster: match.ally_champions, won },
-          { label: "Enemy team", side: "red", roster: match.enemy_champions, won: !won },
+          { label: "Your team", side: "blue", roster: allyRoster, won },
+          { label: "Enemy team", side: "red", roster: enemyRoster, won: !won },
         ].map((t, idx) => (
           <div key={idx} className="panel" style={{ borderColor: t.won ? "oklch(0.78 0.16 150 / 0.3)" : undefined }}>
             <div className="panel-header">
@@ -139,20 +215,16 @@ export function MatchDetailScreen({ matchId, onBack }: Props) {
               <span className={`tag ${t.won ? "win" : "loss"}`}>{t.won ? "VICTORY" : "DEFEAT"}</span>
             </div>
             <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {t.roster.map((cid, i) => {
-                const isMe = idx === 0 && cid === match.champion_id;
-                return (
-                  <div key={i} style={{ display: "grid", gridTemplateColumns: "32px 36px 1fr 60px", gap: 10, alignItems: "center", padding: 8, background: isMe ? "var(--accent-soft)" : "var(--bg-3)", border: `1px solid ${isMe ? "var(--accent)" : "var(--line-1)"}`, borderRadius: 6 }}>
-                    <span className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)", fontWeight: 700, letterSpacing: "0.08em" }}>{ROLES[i]}</span>
-                    <Champ id={cid.toLowerCase()} withTooltip />
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500 }}>{cid}</div>
-                      <div className="t-mono" style={{ fontSize: 10, color: "var(--fg-3)" }}>{isMe ? "You" : `Player ${i + 1}`}</div>
-                    </div>
-                    <span className="t-mono fg-2" style={{ fontSize: 10 }}>—</span>
-                  </div>
-                );
-              })}
+              {t.roster.map((player, i) => (
+                <PlayerRow
+                  key={i}
+                  role={ROLES[i] ?? "?"}
+                  participant={player.participant}
+                  champId={player.champId}
+                  isMe={player.isMe}
+                  onSearchPlayer={onSearchPlayer}
+                />
+              ))}
             </div>
           </div>
         ))}

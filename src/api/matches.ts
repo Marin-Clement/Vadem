@@ -21,7 +21,22 @@ export interface MatchListItem {
   enemy_champions: string[];
 }
 
-export type MatchDetail = MatchListItem;
+export interface ParticipantSummary {
+  champion_id: string;
+  game_name: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+  damage: number;
+  vision_score: number;
+  items: number[];
+}
+
+export interface MatchDetail extends MatchListItem {
+  ally_participants: ParticipantSummary[];
+  enemy_participants: ParticipantSummary[];
+}
 
 interface MatchListResponse {
   matches: MatchListItem[];

@@ -1,30 +1,71 @@
 import { useEffect, useState } from "react";
-import { useSettings } from "../hooks/useSettings";
 import { useAuthStore } from "../store/authStore";
 import { getSettings, updateSettings, type UserSettings } from "../api/settings";
 
+function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <div
+      className={`toggle ${on ? "on" : ""}`}
+      onClick={onToggle}
+      style={{ cursor: "pointer" }}
+    />
+  );
+}
+
+function SegControl({ value, options, onChange }: {
+  value: string;
+  options: { val: string; label: string }[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="seg">
+      {options.map(o => (
+        <button
+          key={o.val}
+          className={`seg-item ${value === o.val ? "on" : ""}`}
+          onClick={() => onChange(o.val)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function SettingsScreen() {
-  const { settings, saveSettings } = useSettings();
   const profile = useAuthStore(s => s.profile);
   const logout = useAuthStore(s => s.logout);
-  const [remoteSettings, setRemoteSettings] = useState<UserSettings | null>(null);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getSettings().then(setRemoteSettings).catch(() => {});
+    getSettings().then(setSettings).catch(() => setError("Could not load settings"));
   }, []);
 
-  const handleRemoteToggle = async (key: keyof Omit<UserSettings, 'user_id'>, value: boolean) => {
+  const update = async (patch: Partial<Omit<UserSettings, 'user_id'>>) => {
+    if (!settings) return;
+    const optimistic = { ...settings, ...patch };
+    setSettings(optimistic);
+    setSaving(true);
     try {
-      const updated = await updateSettings({ [key]: value });
-      setRemoteSettings(updated);
+      const updated = await updateSettings(patch);
+      setSettings(updated);
     } catch {
-      // ignore
+      setSettings(settings); // rollback
+      setError("Failed to save setting");
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
     <div className="content fade-up" style={{ maxWidth: 880 }}>
-      <div className="t-eyebrow" style={{ marginBottom: 16 }}>PREFERENCES // CONFIGURATION</div>
+      <div className="t-eyebrow" style={{ marginBottom: 16 }}>
+        PREFERENCES // CONFIGURATION
+        {saving && <span style={{ marginLeft: 12, color: "var(--fg-3)", fontWeight: 400 }}>Saving…</span>}
+        {error && <span style={{ marginLeft: 12, color: "var(--red)", fontWeight: 400 }}>{error}</span>}
+      </div>
 
       {/* Account */}
       <div className="panel" style={{ marginBottom: 14 }}>
@@ -41,20 +82,6 @@ export function SettingsScreen() {
             </div>
             <button className="btn btn-sm" onClick={() => logout()}>DISCONNECT</button>
           </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-name">Auto-detect game client</div>
-              <div className="settings-row-desc">Launches overlay automatically when client is open</div>
-            </div>
-            <div className="toggle on" />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-name">Sync across devices</div>
-              <div className="settings-row-desc">Encrypted preferences sync via account</div>
-            </div>
-            <div className="toggle on" />
-          </div>
         </div>
       </div>
 
@@ -69,26 +96,13 @@ export function SettingsScreen() {
               <div className="settings-row-name">Theme</div>
               <div className="settings-row-desc">Dark recommended for long sessions</div>
             </div>
-            <div className="seg">
-              <button
-                className={`seg-item ${(remoteSettings?.theme ?? 'dark') === 'dark' ? 'on' : ''}`}
-                onClick={() => handleRemoteToggle('theme' as never, 'dark' as never)}
-              >DARK</button>
-              <button
-                className={`seg-item ${(remoteSettings?.theme ?? 'dark') === 'light' ? 'on' : ''}`}
-                onClick={() => handleRemoteToggle('theme' as never, 'light' as never)}
-              >LIGHT</button>
-            </div>
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-name">Compact mode</div>
-              <div className="settings-row-desc">Denser layouts, smaller padding</div>
-            </div>
-            <div
-              className={`toggle ${remoteSettings?.compact_mode ? 'on' : ''}`}
-              onClick={() => remoteSettings && handleRemoteToggle('compact_mode', !remoteSettings.compact_mode)}
-            />
+            {settings ? (
+              <SegControl
+                value={settings.theme}
+                options={[{ val: "dark", label: "DARK" }, { val: "light", label: "LIGHT" }]}
+                onChange={v => update({ theme: v })}
+              />
+            ) : <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>…</div>}
           </div>
         </div>
       </div>
@@ -104,39 +118,82 @@ export function SettingsScreen() {
               <div className="settings-row-name">Show win probability</div>
               <div className="settings-row-desc">Live estimate during the match</div>
             </div>
-            <div
-              className={`toggle ${settings.showWinPrediction ? "on" : ""}`}
-              onClick={() => {
-                saveSettings({ showWinPrediction: !settings.showWinPrediction });
-                if (remoteSettings) handleRemoteToggle('show_win_prediction', !remoteSettings.show_win_prediction);
-              }}
-            />
+            {settings ? (
+              <Toggle on={settings.show_win_prob} onToggle={() => update({ show_win_prob: !settings.show_win_prob })} />
+            ) : <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>…</div>}
           </div>
           <div className="settings-row">
             <div>
               <div className="settings-row-name">Show objective timers</div>
               <div className="settings-row-desc">Drake, Herald, Baron countdowns</div>
             </div>
-            <div
-              className={`toggle ${remoteSettings?.show_objective_timers ? 'on' : 'on'}`}
-              onClick={() => remoteSettings && handleRemoteToggle('show_objective_timers', !remoteSettings.show_objective_timers)}
-            />
+            {settings ? (
+              <Toggle on={settings.show_timers} onToggle={() => update({ show_timers: !settings.show_timers })} />
+            ) : <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>…</div>}
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-name">Click-through</div>
-              <div className="settings-row-desc">Mouse passes through unless modifier held</div>
+              <div className="settings-row-name">Voice coaching</div>
+              <div className="settings-row-desc">Audio cues and TTS alerts during game</div>
             </div>
-            <div className="toggle on" />
+            {settings ? (
+              <Toggle on={settings.tts_enabled} onToggle={() => update({ tts_enabled: !settings.tts_enabled })} />
+            ) : <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>…</div>}
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-name">Poll interval</div>
-              <div className="settings-row-desc">How often to fetch game state (ms)</div>
+              <div className="settings-row-name">Overlay position</div>
+              <div className="settings-row-desc">Where the HUD anchor appears on screen</div>
             </div>
-            <div className="t-mono" style={{ fontSize: 13, color: "var(--fg-1)" }}>
-              {remoteSettings?.poll_interval_ms ?? settings.pollIntervalMs}ms
+            {settings ? (
+              <SegControl
+                value={settings.overlay_pos}
+                options={[
+                  { val: "top-left", label: "↖" },
+                  { val: "top-right", label: "↗" },
+                  { val: "bottom-left", label: "↙" },
+                  { val: "bottom-right", label: "↘" },
+                ]}
+                onChange={v => update({ overlay_pos: v })}
+              />
+            ) : <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>…</div>}
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-name">AI voice style</div>
+              <div className="settings-row-desc">Tone of voice coaching cues</div>
             </div>
+            {settings ? (
+              <SegControl
+                value={settings.ai_voice}
+                options={[
+                  { val: "coach", label: "COACH" },
+                  { val: "analyst", label: "ANALYST" },
+                  { val: "hype", label: "HYPE" },
+                ]}
+                onChange={v => update({ ai_voice: v })}
+              />
+            ) : <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>…</div>}
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-name">Min confidence threshold</div>
+              <div className="settings-row-desc">Only show alerts above this confidence %</div>
+            </div>
+            {settings ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="range"
+                  min={50}
+                  max={95}
+                  step={5}
+                  value={settings.confidence_min}
+                  onChange={e => update({ confidence_min: parseInt(e.target.value) })}
+                  style={{ width: 100 }}
+                />
+                <span className="t-mono" style={{ fontSize: 12, minWidth: 32 }}>{settings.confidence_min}%</span>
+              </div>
+            ) : <div className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>…</div>}
           </div>
         </div>
       </div>

@@ -7,7 +7,7 @@ import { listMatches, formatDuration, formatRelativeTime, type MatchListItem } f
 import { getProfile, type PlayerProfile } from "../api/player";
 import { getPatchDeltas, type PatchDelta } from "../api/champions";
 import { useAuthStore } from "../store/authStore";
-import { WipBanner, WipTag } from "../components/Wip";
+import { WipTag } from "../components/Wip";
 
 type Screen = "dashboard" | "profile" | "matchDetail" | "draft" | "builds" | "macro" | "overlay" | "settings";
 
@@ -37,6 +37,28 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
   const rankLabel = rank ? `${rank.tier} ${rank.division}` : '—';
   const lpLabel = rank ? `${rank.lp} LP` : '';
 
+  const avgKDA = (() => {
+    const valid = recent.filter(m => m.deaths != null && m.kills != null && m.assists != null);
+    if (!valid.length) return "—";
+    const sum = valid.reduce((s, m) => {
+      const d = m.deaths === 0 ? 1 : (m.deaths ?? 1);
+      return s + ((m.kills ?? 0) + (m.assists ?? 0)) / d;
+    }, 0);
+    return (sum / valid.length).toFixed(2);
+  })();
+
+  const avgCSMin = (() => {
+    const valid = recent.filter(m => m.cs_per_min != null);
+    if (!valid.length) return "—";
+    return (valid.reduce((s, m) => s + (m.cs_per_min ?? 0), 0) / valid.length).toFixed(1);
+  })();
+
+  const avgVision = (() => {
+    const valid = recent.filter(m => m.vision_score != null);
+    if (!valid.length) return "—";
+    return Math.round(valid.reduce((s, m) => s + (m.vision_score ?? 0), 0) / valid.length).toString();
+  })();
+
   return (
     <div className="content fade-up">
       {/* Hero row */}
@@ -63,12 +85,11 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
               </div>
             </div>
 
-            <WipBanner label="Avg KDA, CS/min and Vision score stats coming soon — needs aggregation pipeline" />
             <div className="grid-4">
               <StatTile label="Win rate · 14d" value={loading ? "…" : `${recent.length > 0 ? Math.round(wins / recent.length * 100) : 0}`} suffix="%" />
-              <StatTile label="Avg KDA" value="—" />
-              <StatTile label="CS / min" value="—" />
-              <StatTile label="Vision score" value="—" />
+              <StatTile label="Avg KDA" value={loading ? "…" : avgKDA} />
+              <StatTile label="CS / min" value={loading ? "…" : avgCSMin} />
+              <StatTile label="Vision score" value={loading ? "…" : avgVision} />
             </div>
           </div>
         </div>
@@ -249,7 +270,7 @@ export function DashboardScreen({ onNavigate, onSelectMatch }: Props) {
                   </div>
                 </div>
                 <div className="match-team" />
-                <KDARatio k={m.kills} d={m.deaths} a={m.assists} />
+                <KDARatio k={m.kills ?? 0} d={m.deaths ?? 0} a={m.assists ?? 0} />
                 <div className="match-prediction">
                   <div className="match-prediction-bar">
                     <div className="match-prediction-fill" style={{ width: `${m.result ? 60 : 40}%` }} />
