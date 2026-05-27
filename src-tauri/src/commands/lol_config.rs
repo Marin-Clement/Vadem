@@ -6,11 +6,11 @@ use std::path::PathBuf;
 #[serde(rename_all = "camelCase")]
 pub struct LolConfig {
     /// HUD scale 50–100 (LoL "Interface > HUD Scale"), or None if key absent.
-    pub hud_scale:     Option<u32>,
+    pub hud_scale: Option<u32>,
     /// Minimap scale 50–150 (LoL "Interface > Minimap Scale"), or None if absent.
     pub minimap_scale: Option<u32>,
     /// Absolute path of the file that was successfully read.
-    pub found_at:      Option<String>,
+    pub found_at: Option<String>,
 }
 
 /// game.cfg is stored under the Riot Games installation dir.
@@ -87,17 +87,15 @@ fn to_pct(raw: f64, lo: u32, hi: u32) -> u32 {
 pub fn read_lol_config() -> LolConfig {
     for path in candidate_paths() {
         let content = match std::fs::read_to_string(&path) {
-            Ok(c)  => c,
+            Ok(c) => c,
             Err(_) => continue,
         };
 
         // [HUD]
         //   GlobalScale   = 0.18   → HUD scale  (50–100 %)
         //   MinimapScale  = 1.00   → Minimap     (50–150 %)
-        let hud_scale     = ini_get(&content, "HUD", "GlobalScale")
-                              .map(|v| to_pct(v, 50, 100));
-        let minimap_scale = ini_get(&content, "HUD", "MinimapScale")
-                              .map(|v| to_pct(v, 50, 150));
+        let hud_scale = ini_get(&content, "HUD", "GlobalScale").map(|v| to_pct(v, 50, 100));
+        let minimap_scale = ini_get(&content, "HUD", "MinimapScale").map(|v| to_pct(v, 50, 150));
 
         return LolConfig {
             hud_scale,
@@ -107,8 +105,8 @@ pub fn read_lol_config() -> LolConfig {
     }
 
     LolConfig {
-        hud_scale:     None,
+        hud_scale: None,
         minimap_scale: None,
-        found_at:      None,
+        found_at: None,
     }
 }

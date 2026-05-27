@@ -1,7 +1,7 @@
-use std::sync::Mutex;
 use anyhow::{anyhow, Result};
 use ort::session::{builder::GraphOptimizationLevel, Session};
 use ort::value::Value;
+use std::sync::Mutex;
 
 pub struct MlService {
     // Mutex because Session::run requires &mut self in ort rc.12
@@ -17,7 +17,9 @@ impl MlService {
             .commit_from_file(model_path)
             .map_err(|e| anyhow!("{e}"))?;
 
-        Ok(Self { session: Mutex::new(session) })
+        Ok(Self {
+            session: Mutex::new(session),
+        })
     }
 
     /// Takes a 24-element feature vector and returns the win probability (0.0–1.0).
@@ -30,8 +32,7 @@ impl MlService {
     pub fn predict(&self, features: [f32; 24]) -> Result<f32> {
         // Model input name is "float_input" (from skl2onnx initial_type)
         let input_value =
-            Value::from_array(([1usize, 24], features.to_vec()))
-                .map_err(|e| anyhow!("{e}"))?;
+            Value::from_array(([1usize, 24], features.to_vec())).map_err(|e| anyhow!("{e}"))?;
 
         let mut session = self.session.lock().unwrap();
         let outputs = session
@@ -44,7 +45,8 @@ impl MlService {
             .try_extract_tensor::<f32>()
             .map_err(|e| anyhow!("{e}"))?;
 
-        let win_prob = *data.get(1)
+        let win_prob = *data
+            .get(1)
             .ok_or_else(|| anyhow!("probabilities tensor has fewer than 2 elements"))?;
         Ok(win_prob)
     }

@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use parking_lot::RwLock;
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 use tokio::time::{interval, Duration};
 use tracing::{info, warn};
@@ -11,10 +11,7 @@ use crate::{
 
 const POLL_URL: &str = "https://127.0.0.1:2999/liveclientdata/allgamedata";
 
-pub async fn run(
-    app: AppHandle,
-    last_payload: Arc<RwLock<GameStatePayload>>,
-) {
+pub async fn run(app: AppHandle, last_payload: Arc<RwLock<GameStatePayload>>) {
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(true) // League uses a loopback self-signed cert
         .timeout(Duration::from_millis(900))

@@ -1,59 +1,37 @@
-use rdev::{listen, Event, EventType, Key};
-use std::sync::mpsc;
-use std::thread;
 use tauri::{AppHandle, Emitter, Manager};
-use tauri::async_runtime;
-use tracing::{info, warn};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Shortcut, ShortcutState};
+use tracing::info;
 
-enum TabEvent {
-    Pressed,
-    Released,
-}
-
-/// Spawns two concurrent workers:
-/// 1. An OS-thread running `rdev::listen` (blocks forever — cannot be on a tokio thread).
-/// 2. A tokio task draining a channel and emitting Tauri events.
+/// Enregistre la touche TAB globalement via le plugin officiel de Tauri v2.
 pub fn spawn(app: AppHandle) {
-    let (tx, rx) = mpsc::channel::<TabEvent>();
+    // Dans la v2 officielle, un Shortcut se crée avec (Modifiers, Code)
+    // Aucun modificateur (None) + la touche physique Tab (Code::Tab)
+    let tab_shortcut = Shortcut::new(None, Code::Tab);
 
-    // ── OS hook thread ───────────────────────────────────────────────────────
-    thread::spawn(move || {
-        let mut tab_down = false;
+    info!("Registering native global keyboard listener for [TAB] key.");
 
-        if let Err(e) = listen(move |event: Event| {
-            match event.event_type {
-                EventType::KeyPress(Key::Tab) if !tab_down => {
-                    tab_down = true;
-                    let _ = tx.send(TabEvent::Pressed);
-                }
-                EventType::KeyRelease(Key::Tab) if tab_down => {
-                    tab_down = false;
-                    let _ = tx.send(TabEvent::Released);
-                }
-                _ => {}
-            }
-        }) {
-            warn!("rdev listen error: {:?}", e);
-        }
-    });
-
-    // ── Async drain task ─────────────────────────────────────────────────────
-    // Must use tauri's runtime — tokio::spawn panics when called from setup()
-    async_runtime::spawn(async move {
-        while let Ok(evt) = rx.recv() {
-            match evt {
-                TabEvent::Pressed => {
-                    if let Some(w) = app.get_webview_window("tab-overlay") {
+    // Enregistrement du gestionnaire de raccourci
+    let _ = app.global_shortcut().on_shortcut(tab_shortcut, move |app_handle, shortcut, event| {
+        // On s'assure que c'est bien notre touche Tab qui a déclenché l'événement
+        if shortcut.key == Code::Tab {
+            match event.state() {
+                ShortcutState::Pressed => {
+                    // Affiche la fenêtre d'overlay
+                    if let Some(w) = app_handle.get_webview_window("tab-overlay") {
                         let _ = w.show();
                     }
-                    let _ = app.emit("tab_pressed", ());
+                    // Émet l'événement vers le frontend
+                    let _ = app_handle.emit("tab_pressed", ());
                     info!("TAB pressed — overlay shown");
                 }
-                TabEvent::Released => {
-                    if let Some(w) = app.get_webview_window("tab-overlay") {
+                ShortcutState::Released => {
+                    // Masque la fenêtre d'overlay
+                    if let Some(w) = app_handle.get_webview_window("tab-overlay") {
                         let _ = w.hide();
                     }
-                    let _ = app.emit("tab_released", ());
+                    // Émet l'événement vers le frontend
+                    let _ = app_handle.emit("tab_released", ());
+                    info!("TAB released — overlay hidden");
                 }
             }
         }

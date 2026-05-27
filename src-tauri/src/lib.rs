@@ -29,6 +29,8 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
+        // ── 1. Initialisation obligatoire du plugin de raccourcis ───────────
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             // ── Shared game state ────────────────────────────────────────────
             let game_state: Arc<RwLock<GameStatePayload>> =
@@ -39,9 +41,6 @@ pub fn run() {
             app.manage(new_registry());
 
             // ── ONNX model ───────────────────────────────────────────────────
-            // In dev mode resource_dir() == target/debug/ (no auto-copy).
-            // Use CARGO_MANIFEST_DIR (src-tauri/) to reach the project root at
-            // compile time; fall back to resource_dir() in release builds.
             let model_path = if cfg!(debug_assertions) {
                 std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                     .parent()
@@ -71,7 +70,7 @@ pub fn run() {
                 league_poller::run(handle, state_ref).await;
             });
 
-            // ── Spawn keyboard hook ──────────────────────────────────────────
+            // ── 2. Activation de l'écoute du raccourci TAB ──────────────────
             hooks::keyboard::spawn(app.handle().clone());
 
             Ok(())

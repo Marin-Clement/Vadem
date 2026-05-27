@@ -21,6 +21,7 @@
     "resources": ["../vadem_win_model.onnx"]
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "label": "dashboard",
