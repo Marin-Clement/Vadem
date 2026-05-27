@@ -19,11 +19,14 @@ export interface MatchListItem {
   items: number[];
   ally_champions: string[];
   ally_names: string[];
+  ally_puuids: string[];
   enemy_champions: string[];
   enemy_names: string[];
+  enemy_puuids: string[];
 }
 
 export interface ParticipantSummary {
+  puuid: string;
   champion_id: string;
   game_name: string;
   kills: number;

@@ -11,7 +11,7 @@ const ROLES = ["TOP", "JNG", "MID", "BOT", "SUP"];
 interface Props {
   matchId: string;
   onBack: () => void;
-  onViewPlayer?: (gameName: string, tagLine: string) => void;
+  onViewPlayer?: (puuid: string, gameName: string, tagLine: string) => void;
 }
 
 interface PlayerRowProps {
@@ -19,7 +19,7 @@ interface PlayerRowProps {
   participant?: ParticipantSummary;
   champId: string;
   isMe: boolean;
-  onViewPlayer?: (gameName: string, tagLine: string) => void;
+  onViewPlayer?: (puuid: string, gameName: string, tagLine: string) => void;
 }
 
 function PlayerRow({ role, participant, champId, isMe, onViewPlayer }: PlayerRowProps) {
@@ -27,13 +27,13 @@ function PlayerRow({ role, participant, champId, isMe, onViewPlayer }: PlayerRow
     ? `${participant.kills}/${participant.deaths}/${participant.assists}`
     : "—";
   const name = isMe ? "You" : (participant?.game_name ?? champId);
-  const canClick = !isMe && !!participant?.game_name && !!onViewPlayer;
+  const canClick = !isMe && !!participant?.puuid && !!onViewPlayer;
 
   const handleClick = () => {
-    if (!canClick || !participant?.game_name) return;
+    if (!canClick || !participant) return;
     const raw = participant.game_name;
     const [gn, tl = ""] = raw.includes("#") ? raw.split("#") : [raw, ""];
-    onViewPlayer!(gn, tl);
+    onViewPlayer!(participant.puuid, gn, tl);
   };
 
   return (

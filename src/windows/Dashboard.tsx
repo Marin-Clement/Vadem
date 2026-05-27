@@ -20,7 +20,7 @@ export default function Dashboard() {
   const [prevScreen, setPrevScreen] = useState<Screen>("dashboard");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [buildsChampionId, setBuildsChampionId] = useState<string>("syndra");
-  const [playerTarget, setPlayerTarget] = useState<{ gameName: string; tagLine: string } | null>(null);
+  const [playerTarget, setPlayerTarget] = useState<{ puuid: string; gameName: string; tagLine: string } | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("vadem_theme");
@@ -35,8 +35,8 @@ export default function Dashboard() {
     setScreen(s);
   };
 
-  const navigateToPlayer = (gameName: string, tagLine: string) => {
-    setPlayerTarget({ gameName, tagLine });
+  const navigateToPlayer = (puuid: string, gameName: string, tagLine: string) => {
+    setPlayerTarget({ puuid, gameName, tagLine });
     setPrevScreen(screen);
     setScreen("playerProfile");
   };
@@ -71,6 +71,7 @@ export default function Dashboard() {
       case "playerProfile":
         return playerTarget ? (
           <PublicProfileScreen
+            puuid={playerTarget.puuid}
             gameName={playerTarget.gameName}
             tagLine={playerTarget.tagLine}
             onBack={() => setScreen(prevScreen)}

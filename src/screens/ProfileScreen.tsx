@@ -22,7 +22,7 @@ interface Props {
   onSelectMatch: (id: string) => void;
   onOpenMatchDetail: (id: string) => void;
   onNavigate?: (s: Screen, extra?: { championId?: string }) => void;
-  onViewPlayer?: (gameName: string, tagLine: string) => void;
+  onViewPlayer?: (puuid: string, gameName: string, tagLine: string) => void;
 }
 
 function MatchDetailPanel({ matchId, onOpenFull }: { matchId: string; onOpenFull: () => void }) {
@@ -376,7 +376,8 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
                       <Champ id={m.champion_id.toLowerCase()} size="xs" playerName="You" />
                       {m.ally_champions.slice(0, 4).map((id, i) => {
                         const raw = m.ally_names?.[i] ?? "";
-                        const [gn, tl] = raw.includes("#") ? raw.split("#") : [raw, ""];
+                        const puuid = m.ally_puuids?.[i] ?? "";
+                        const [gn, tl = ""] = raw.includes("#") ? raw.split("#") : [raw, ""];
                         return (
                           <Champ
                             key={i}
@@ -384,7 +385,7 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
                             size="xs"
                             playerName={gn || undefined}
                             withTooltip
-                            onClick={gn && onViewPlayer ? () => onViewPlayer(gn, tl) : undefined}
+                            onClick={puuid && onViewPlayer ? () => onViewPlayer(puuid, gn, tl) : undefined}
                           />
                         );
                       })}
@@ -392,7 +393,8 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
                     <div style={{ display: "flex", gap: 2 }}>
                       {m.enemy_champions.slice(0, 5).map((id, i) => {
                         const raw = m.enemy_names?.[i] ?? "";
-                        const [gn, tl] = raw.includes("#") ? raw.split("#") : [raw, ""];
+                        const puuid = m.enemy_puuids?.[i] ?? "";
+                        const [gn, tl = ""] = raw.includes("#") ? raw.split("#") : [raw, ""];
                         return (
                           <Champ
                             key={i}
@@ -400,7 +402,7 @@ export function ProfileScreen({ selectedMatchId, onSelectMatch, onOpenMatchDetai
                             size="xs"
                             playerName={gn || undefined}
                             withTooltip
-                            onClick={gn && onViewPlayer ? () => onViewPlayer(gn, tl) : undefined}
+                            onClick={puuid && onViewPlayer ? () => onViewPlayer(puuid, gn, tl) : undefined}
                           />
                         );
                       })}

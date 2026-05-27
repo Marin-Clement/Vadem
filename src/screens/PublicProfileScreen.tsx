@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "../components/Icon";
 import { useDDragon } from "../utils/ddragon";
-import { lookupPlayer, type PlayerProfile } from "../api/player";
+import { getPublicProfile, type PlayerProfile } from "../api/player";
 
 const TIER_COLOR: Record<string, string> = {
   IRON: "#6b7280", BRONZE: "#92400e", SILVER: "#9ca3af",
@@ -11,12 +11,13 @@ const TIER_COLOR: Record<string, string> = {
 };
 
 interface Props {
+  puuid: string;
   gameName: string;
   tagLine: string;
   onBack: () => void;
 }
 
-export function PublicProfileScreen({ gameName, tagLine, onBack }: Props) {
+export function PublicProfileScreen({ puuid, gameName, tagLine, onBack }: Props) {
   const ddr = useDDragon();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,18 +26,21 @@ export function PublicProfileScreen({ gameName, tagLine, onBack }: Props) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    lookupPlayer(gameName, tagLine)
+    getPublicProfile(puuid, gameName, tagLine)
       .then(setProfile)
       .catch(e => setError((e as Error).message))
       .finally(() => setLoading(false));
-  }, [gameName, tagLine]);
+  }, [puuid, gameName, tagLine]);
+
+  const displayName = profile?.game_name || gameName;
+  const displayTag  = profile?.tag_line  || tagLine;
 
   const profileIconUrl = profile?.profile_icon_id && ddr
     ? `https://ddragon.leagueoflegends.com/cdn/${ddr.version}/img/profileicon/${profile.profile_icon_id}.png`
     : null;
 
   const rank = profile?.rank;
-  const initials = gameName.slice(0, 2).toUpperCase();
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <div className="content fade-up">
@@ -45,14 +49,14 @@ export function PublicProfileScreen({ gameName, tagLine, onBack }: Props) {
           <Icon name="chevron-left" size={12} /> Back
         </button>
         <span className="t-mono" style={{ fontSize: 11, color: "var(--fg-3)" }}>
-          PLAYER · {gameName}#{tagLine}
+          PLAYER · {displayName}{displayTag ? `#${displayTag}` : ""}
         </span>
       </div>
 
       {loading && (
         <div className="panel">
           <div className="panel-body t-mono" style={{ fontSize: 12, color: "var(--fg-3)" }}>
-            Looking up {gameName}#{tagLine}…
+            Loading profile…
           </div>
         </div>
       )}
@@ -65,7 +69,7 @@ export function PublicProfileScreen({ gameName, tagLine, onBack }: Props) {
         </div>
       )}
 
-      {profile && (
+      {!loading && (
         <div className="panel tactical" style={{ marginBottom: 14, position: "relative", overflow: "hidden" }}>
           <div className="tactical-grid-bg" style={{ position: "absolute", inset: 0, opacity: 0.3, maskImage: "radial-gradient(circle at 80% 50%, transparent, black 70%)" }} />
           <div className="panel-body" style={{ display: "flex", gap: 24, alignItems: "center", position: "relative" }}>
@@ -89,7 +93,7 @@ export function PublicProfileScreen({ gameName, tagLine, onBack }: Props) {
                 ) : null}
                 <span style={{ display: profileIconUrl ? "none" : undefined }}>{initials}</span>
               </div>
-              {profile.summoner_level > 0 && (
+              {profile?.summoner_level ? (
                 <div style={{
                   position: "absolute", bottom: -4, right: -4,
                   padding: "2px 6px", background: "var(--bg-3)",
@@ -98,17 +102,21 @@ export function PublicProfileScreen({ gameName, tagLine, onBack }: Props) {
                 }}>
                   {profile.summoner_level}
                 </div>
-              )}
+              ) : null}
             </div>
 
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
                 <div className="t-display" style={{ fontSize: 28, fontWeight: 600, letterSpacing: "-0.02em" }}>
-                  {profile.game_name}
+                  {displayName}
                 </div>
-                <span className="t-mono" style={{ fontSize: 13, color: "var(--fg-3)" }}>#{profile.tag_line}</span>
+                {displayTag && (
+                  <span className="t-mono" style={{ fontSize: 13, color: "var(--fg-3)" }}>#{displayTag}</span>
+                )}
               </div>
-              <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 4 }}>{profile.region.toUpperCase()}</div>
+              <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 4 }}>
+                {profile?.region?.toUpperCase() ?? "—"}
+              </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
                 {rank ? (
                   <>
@@ -123,11 +131,13 @@ export function PublicProfileScreen({ gameName, tagLine, onBack }: Props) {
                       {rank.tier} {rank.division} · {rank.lp} LP
                     </span>
                     <span className="tag">
-                      {rank.wins}W {rank.losses}L ({rank.wins + rank.losses > 0 ? Math.round(rank.wins / (rank.wins + rank.losses) * 100) : 0}% WR)
+                      {rank.wins}W {rank.losses}L ({rank.wins + rank.losses > 0
+                        ? Math.round(rank.wins / (rank.wins + rank.losses) * 100)
+                        : 0}% WR)
                     </span>
                   </>
                 ) : (
-                  <span className="tag" style={{ color: "var(--fg-3)" }}>Unranked</span>
+                  !error && <span className="tag" style={{ color: "var(--fg-3)" }}>Unranked</span>
                 )}
               </div>
             </div>
